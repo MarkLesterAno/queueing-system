@@ -201,26 +201,34 @@ function CounterPanel({
               Skip
             </button>
           </div>
+        ) : currentTicket.status === "done" ? (
+          <div className="flex flex-col gap-1">
+            <button
+              onClick={() => setShowTransferModal(true)}
+              disabled={!!loading}
+              className="flex-1 flex items-center justify-center px-4 py-3 bg-secondary text-muted-foreground rounded-sm font-mono text-xs uppercase tracking-widest hover:bg-border transition-colors disabled:opacity-50"
+              title="Transfer to another office"
+            >
+              {loading === "transfer" ? "..." : "Transfer to Office"}
+            </button>
+            <button
+              onClick={() => wrap("callnext", () => callNext(officeId, counterNum))}
+              disabled={!!loading}
+              className="flex-1 flex items-center justify-center px-4 py-3 bg-secondary text-muted-foreground rounded-sm font-mono text-xs uppercase tracking-widest hover:bg-border transition-colors disabled:opacity-50"
+            >
+              Next
+            </button>
+          </div>
         ) : (
           <div className="flex flex-col gap-1">
-            <div className="flex gap-1">
-              <button
-                onClick={() => wrap("complete", () => completeTicket(officeId, currentTicket.id))}
-                disabled={!!loading}
-                className="flex-1 flex items-center justify-center py-3 rounded-sm font-mono text-xs uppercase tracking-widest disabled:opacity-50 text-primary-foreground"
-                style={{ backgroundColor: color }}
-              >
-                {loading === "complete" ? "..." : "Complete"}
-              </button>
-              <button
-                onClick={() => setShowTransferModal(true)}
-                disabled={!!loading}
-                className="flex-1 flex items-center justify-center px-4 py-3 bg-secondary text-muted-foreground rounded-sm font-mono text-xs uppercase tracking-widest hover:bg-border transition-colors disabled:opacity-50"
-                title="Transfer to another office"
-              >
-                {loading === "transfer" ? "..." : "Transfer"}
-              </button>
-            </div>
+            <button
+              onClick={() => wrap("complete", () => completeTicket(officeId, currentTicket.id))}
+              disabled={!!loading}
+              className="flex-1 flex items-center justify-center py-3 rounded-sm font-mono text-xs uppercase tracking-widest disabled:opacity-50 text-primary-foreground"
+              style={{ backgroundColor: color }}
+            >
+              {loading === "complete" ? "..." : "Complete"}
+            </button>
             <div className="flex gap-1">
               <button
                 onClick={() => wrap("hold", () => holdTicket(officeId, currentTicket.id))}
