@@ -117,9 +117,11 @@ function CounterPanel({
   }
 
   const handleTransfer = async (toOfficeId: string) => {
+    setLoading("transfer")
     await transferTicket(officeId, toOfficeId, currentTicket!.id)
     setShowTransferModal(false)
     onMutate()
+    setLoading(null)
   }
 
   return (
@@ -213,10 +215,10 @@ function CounterPanel({
               <button
                 onClick={() => setShowTransferModal(true)}
                 disabled={!!loading}
-                className="flex items-center justify-center px-4 py-3 bg-secondary text-muted-foreground rounded-sm font-mono text-xs uppercase tracking-widest hover:bg-border transition-colors disabled:opacity-50"
+                className="flex-1 flex items-center justify-center px-4 py-3 bg-secondary text-muted-foreground rounded-sm font-mono text-xs uppercase tracking-widest hover:bg-border transition-colors disabled:opacity-50"
                 title="Transfer to another office"
               >
-                Transfer
+                {loading === "transfer" ? "..." : "Transfer"}
               </button>
             </div>
             <div className="flex gap-1">
