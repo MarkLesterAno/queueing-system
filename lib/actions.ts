@@ -230,8 +230,7 @@ export async function transferTicket(
   toOfficeId: string,
   ticketId: string
 ): Promise<Ticket | null> {
-  const toOffice = getOffice(toOfficeId)
-  if (!toOffice) return null
+  if (!getOffice(toOfficeId)) return null
 
   const fromKeys = officeKeys(fromOfficeId)
   const toKeys = officeKeys(toOfficeId)
@@ -245,43 +244,26 @@ export async function transferTicket(
 
   const ticket = fromTickets[ticketIdx]
   
-  // Allow transfer for serving or done tickets
-  if (ticket.status !== "serving" && ticket.status !== "done") return null
-
-  // Mark as done if still serving (needed before transfer)
-  if (ticket.status === "serving") {
-    ticket.status = "done"
-    ticket.doneAt = Date.now()
-    
-    // Clear from serving state
-    if (ticket.counter) {
-      fromServing[ticket.counter] = null
-    }
-  }
+  // Only allow transfer for done tickets
+  if (ticket.status !== "done") return null
 
   // Remove from source office
   fromTickets.splice(ticketIdx, 1)
   await redis.set(fromKeys.TICKETS, fromTickets)
   await redis.set(fromKeys.SERVING, fromServing)
 
-  // Create new ticket in destination office with new ID
-  const nextSeq = await redis.incr(toKeys.NEXT_SEQ)
-  const newTicket: Ticket = {
-    id: formatTicketId(toOffice.prefix, nextSeq),
-    seq: nextSeq,
-    officeId: toOfficeId,
-    status: "waiting",
-    counter: null,
-    createdAt: Date.now(),
-    calledAt: null,
-    servedAt: null,
-    doneAt: null,
-  }
+  // Transfer ticket to destination office with same ID
+  ticket.officeId = toOfficeId
+  ticket.status = "waiting"
+  ticket.counter = null
+  ticket.calledAt = null
+  ticket.servedAt = null
+  ticket.doneAt = null
 
-  toTickets.push(newTicket)
+  toTickets.push(ticket)
   await redis.set(toKeys.TICKETS, toTickets)
   
-  return newTicket
+  return ticket
 }
 
 // ── Aggregate data (supervisor) ───────────────────────────────────
