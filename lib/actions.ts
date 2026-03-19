@@ -223,6 +223,54 @@ export async function verifySupervisorPin(pin: string): Promise<boolean> {
   return pin === supervisorPin
 }
 
+// ── Transfer ticket ──────────────────────────────────────────────
+
+export async function transferTicket(
+  fromOfficeId: string,
+  toOfficeId: string,
+  ticketId: string
+): Promise<Ticket | null> {
+  const toOffice = getOffice(toOfficeId)
+  if (!toOffice) return null
+
+  const fromKeys = officeKeys(fromOfficeId)
+  const toKeys = officeKeys(toOfficeId)
+  
+  const fromTickets = await getOfficeTickets(fromOfficeId)
+  const toTickets = await getOfficeTickets(toOfficeId)
+  
+  const ticketIdx = fromTickets.findIndex((t) => t.id === ticketId)
+  if (ticketIdx === -1) return null
+
+  const ticket = fromTickets[ticketIdx]
+  
+  // Only transfer if ticket is done
+  if (ticket.status !== "done") return null
+
+  // Remove from source office
+  fromTickets.splice(ticketIdx, 1)
+  await redis.set(fromKeys.TICKETS, fromTickets)
+
+  // Create new ticket in destination office with new ID
+  const nextSeq = await redis.incr(toKeys.NEXT_SEQ)
+  const newTicket: Ticket = {
+    id: formatTicketId(toOffice.prefix, nextSeq),
+    seq: nextSeq,
+    officeId: toOfficeId,
+    status: "waiting",
+    counter: null,
+    createdAt: Date.now(),
+    calledAt: null,
+    servedAt: null,
+    doneAt: null,
+  }
+
+  toTickets.push(newTicket)
+  await redis.set(toKeys.TICKETS, toTickets)
+  
+  return newTicket
+}
+
 // ── Aggregate data (supervisor) ───────────────────────────────────
 
 export async function getAllOfficeStats() {
