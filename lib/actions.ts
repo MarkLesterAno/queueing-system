@@ -245,18 +245,12 @@ export async function transferTicket(
 
   const ticket = fromTickets[ticketIdx]
   
-  // Allow transfer for serving or done tickets
-  if (ticket.status !== "serving" && ticket.status !== "done") return null
-
-  // Remove from source office serving state if applicable
-  if (ticket.status === "serving" && ticket.counter) {
-    fromServing[ticket.counter] = null
-  }
+  // Only transfer if ticket is done
+  if (ticket.status !== "done") return null
 
   // Remove from source office
   fromTickets.splice(ticketIdx, 1)
   await redis.set(fromKeys.TICKETS, fromTickets)
-  await redis.set(fromKeys.SERVING, fromServing)
 
   // Create new ticket in destination office with new ID
   const nextSeq = await redis.incr(toKeys.NEXT_SEQ)
