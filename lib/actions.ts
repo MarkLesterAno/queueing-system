@@ -248,9 +248,15 @@ export async function transferTicket(
   // Allow transfer for serving or done tickets
   if (ticket.status !== "serving" && ticket.status !== "done") return null
 
-  // Remove from source office serving state if applicable
-  if (ticket.status === "serving" && ticket.counter) {
-    fromServing[ticket.counter] = null
+  // Mark as done if still serving (needed before transfer)
+  if (ticket.status === "serving") {
+    ticket.status = "done"
+    ticket.doneAt = Date.now()
+    
+    // Clear from serving state
+    if (ticket.counter) {
+      fromServing[ticket.counter] = null
+    }
   }
 
   // Remove from source office
