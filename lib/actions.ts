@@ -238,18 +238,31 @@ export async function transferTicket(
   
   const fromTickets = await getOfficeTickets(fromOfficeId)
   const toTickets = await getOfficeTickets(toOfficeId)
+  const fromServing = await getOfficeServing(fromOfficeId)
   
   const ticketIdx = fromTickets.findIndex((t) => t.id === ticketId)
   if (ticketIdx === -1) return null
 
   const ticket = fromTickets[ticketIdx]
   
-  // Only transfer done tickets
-  if (ticket.status !== "done") return null
+  // Allow transfer for serving or done tickets
+  if (ticket.status !== "serving" && ticket.status !== "done") return null
+
+  // Mark as done if still serving (needed before transfer)
+  if (ticket.status === "serving") {
+    ticket.status = "done"
+    ticket.doneAt = Date.now()
+    
+    // Clear from serving state
+    if (ticket.counter) {
+      fromServing[ticket.counter] = null
+    }
+  }
 
   // Remove from source office
   fromTickets.splice(ticketIdx, 1)
   await redis.set(fromKeys.TICKETS, fromTickets)
+  await redis.set(fromKeys.SERVING, fromServing)
 
   // Create new ticket in destination office with new ID
   const nextSeq = await redis.incr(toKeys.NEXT_SEQ)
