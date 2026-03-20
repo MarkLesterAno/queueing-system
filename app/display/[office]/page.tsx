@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback, useRef } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { getOffice, OFFICES } from "@/lib/queue"
+import TextToSpeech from "@/components/tts-narrator"
 
 interface DisplayData {
   office: { id: string; name: string; abbreviation: string; color: string }
@@ -69,10 +70,11 @@ function CounterDisplay({
   // Parse prefix and number from ticket id like "HR-001"
   const prefix = ticketId ? ticketId.split("-")[0] : null
   const num = ticketId ? ticketId.split("-")[1] : null
+  const tts = num ? num : ""
 
   return (
     <div className="flex flex-col items-center gap-4 px-6 py-10 flex-1">
-      <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
+      <span className="font-mono text-[20px] uppercase tracking-[0.2em] text-muted-foreground">
         Counter {counterNum}
       </span>
       <AnimatePresence mode="wait">
@@ -87,7 +89,7 @@ function CounterDisplay({
           {ticketId ? (
             <>
               <span
-                className="font-mono text-sm uppercase tracking-widest"
+                className="font-mono text-lg uppercase tracking-widest"
                 style={{ color }}
               >
                 {prefix}
@@ -106,6 +108,8 @@ function CounterDisplay({
           )}
         </motion.div>
       </AnimatePresence>
+      <TextToSpeech text={tts} />
+
       <span
         className="font-mono text-[10px] uppercase tracking-widest"
         style={{ color: status === "active" ? color : "var(--muted-foreground)" }}
@@ -178,6 +182,7 @@ export default function OfficeDisplayPage({
                   status={data.counters[num]?.status ?? "idle"}
                   color={color}
                 />
+
               )
             )}
           </div>
