@@ -233,7 +233,6 @@ export async function transferTicket(
   const toOffice = getOffice(toOfficeId)
   if (!toOffice) return null
 
-  const fromKeys = officeKeys(fromOfficeId)
   const toKeys = officeKeys(toOfficeId)
   
   const fromTickets = await getOfficeTickets(fromOfficeId)
@@ -259,15 +258,10 @@ export async function transferTicket(
     }
   }
 
-  // Remove from source office
-  fromTickets.splice(ticketIdx, 1)
-  await redis.set(fromKeys.TICKETS, fromTickets)
-  await redis.set(fromKeys.SERVING, fromServing)
-
   // Create new ticket in destination office with new ID
   const nextSeq = await redis.incr(toKeys.NEXT_SEQ)
   const newTicket: Ticket = {
-    id: formatTicketId(toOffice.prefix, nextSeq),
+    id: ticket.id,
     seq: nextSeq,
     officeId: toOfficeId,
     status: "waiting",
@@ -280,6 +274,8 @@ export async function transferTicket(
 
   toTickets.push(newTicket)
   await redis.set(toKeys.TICKETS, toTickets)
+  await completeTicket(fromOfficeId, ticketId)
+
   
   return newTicket
 }
