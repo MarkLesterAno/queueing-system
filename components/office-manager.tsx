@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { addOffice, updateOffice, deleteOffice } from "@/lib/actions"
-import { ChevronDown, X } from "lucide-react"
+import { X } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
 
 interface OfficeFormData {
@@ -12,6 +12,7 @@ interface OfficeFormData {
   prefix: string
   color: string
   counters: number
+  pin: string
 }
 
 interface OfficeManagerProps {
@@ -31,7 +32,7 @@ const DEFAULT_COLORS = [
 ]
 
 export default function OfficeManager({ offices, onMutate }: OfficeManagerProps) {
-  const [isOpen, setIsOpen] = useState(false)
+  const [isModalOpen, setIsModalOpen] = useState(false)
   const [isAddMode, setIsAddMode] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
@@ -43,6 +44,7 @@ export default function OfficeManager({ offices, onMutate }: OfficeManagerProps)
     prefix: "",
     color: DEFAULT_COLORS[0],
     counters: 2,
+    pin: "1234",
   })
 
   const resetForm = () => {
@@ -53,10 +55,16 @@ export default function OfficeManager({ offices, onMutate }: OfficeManagerProps)
       prefix: "",
       color: DEFAULT_COLORS[0],
       counters: 2,
+      pin: "1234",
     })
     setEditingId(null)
     setIsAddMode(false)
     setError("")
+  }
+
+  const closeModal = () => {
+    resetForm()
+    setIsModalOpen(false)
   }
 
   const validateForm = (): boolean => {
@@ -84,6 +92,14 @@ export default function OfficeManager({ offices, onMutate }: OfficeManagerProps)
       setError("Prefix must be 3 characters or less")
       return false
     }
+    if (!formData.pin.trim()) {
+      setError("PIN is required")
+      return false
+    }
+    if (formData.pin.length < 4) {
+      setError("PIN must be at least 4 characters")
+      return false
+    }
     if (formData.counters < 1 || formData.counters > 6) {
       setError("Counters must be between 1 and 6")
       return false
@@ -99,6 +115,7 @@ export default function OfficeManager({ offices, onMutate }: OfficeManagerProps)
   const startAdd = () => {
     resetForm()
     setIsAddMode(true)
+    setIsModalOpen(true)
   }
 
   const startEdit = (office: any) => {
@@ -109,14 +126,16 @@ export default function OfficeManager({ offices, onMutate }: OfficeManagerProps)
       prefix: office.prefix,
       color: office.color,
       counters: office.counters,
+      pin: office.pin || "1234",
     })
     setEditingId(office.id)
     setIsAddMode(false)
+    setIsModalOpen(true)
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    
+
     if (!validateForm()) return
 
     setLoading(true)
@@ -129,10 +148,11 @@ export default function OfficeManager({ offices, onMutate }: OfficeManagerProps)
           formData.abbreviation.trim().toUpperCase(),
           formData.prefix.trim().toUpperCase(),
           formData.color,
-          formData.counters
+          formData.counters,
+          formData.pin.trim()
         )
         if (success) {
-          resetForm()
+          closeModal()
           onMutate()
         } else {
           setError("Failed to add office. Office ID may already exist.")
@@ -144,9 +164,10 @@ export default function OfficeManager({ offices, onMutate }: OfficeManagerProps)
           prefix: formData.prefix.trim().toUpperCase(),
           color: formData.color,
           counters: formData.counters,
+          pin: formData.pin.trim(),
         })
         if (success) {
-          resetForm()
+          closeModal()
           onMutate()
         } else {
           setError("Failed to update office.")
@@ -166,7 +187,7 @@ export default function OfficeManager({ offices, onMutate }: OfficeManagerProps)
     try {
       const success = await deleteOffice(id)
       if (success) {
-        resetForm()
+        closeModal()
         onMutate()
       }
     } finally {
@@ -175,140 +196,210 @@ export default function OfficeManager({ offices, onMutate }: OfficeManagerProps)
   }
 
   return (
-    <div className="border border-border rounded-sm overflow-hidden">
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="w-full flex items-center justify-between px-4 py-3 bg-secondary border-b border-border hover:bg-border transition-colors"
-      >
-        <span className="font-mono text-xs uppercase tracking-widest text-foreground">
-          Office Management
-        </span>
-        <ChevronDown
-          size={16}
-          className={`text-muted-foreground transition-transform ${isOpen ? "rotate-180" : ""}`}
-        />
-      </button>
-
-      <AnimatePresence>
-        {isOpen && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            className="overflow-hidden"
+    <>
+      {/* Offices List Header */}
+      <div className="border border-border rounded-sm overflow-hidden">
+        <div className="flex items-center justify-between px-4 py-3 bg-secondary">
+          <span className="font-mono text-xs uppercase tracking-widest text-foreground">
+            Offices ({offices.length})
+          </span>
+          <button
+            onClick={startAdd}
+            className="px-3 py-1.5 bg-primary text-primary-foreground font-mono text-xs uppercase tracking-widest rounded-sm hover:opacity-90 transition-opacity"
           >
-            <div className="p-4 bg-secondary/50 flex flex-col gap-4">
-              {/* Form Section */}
-              {(isAddMode || editingId) && (
-                <form onSubmit={handleSubmit} className="flex flex-col gap-3 pb-4 border-b border-border">
-                  <div className="flex items-center justify-between">
-                    <span className="font-mono text-xs uppercase tracking-widest text-muted-foreground">
-                      {isAddMode ? "Add New Office" : "Edit Office"}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={resetForm}
-                      className="text-muted-foreground hover:text-foreground transition-colors"
-                    >
-                      <X size={16} />
-                    </button>
-                  </div>
+            + Add
+          </button>
+        </div>
 
+        {/* Offices Grid */}
+        <div className="p-4 bg-secondary/50 grid grid-cols-1 md:grid-cols-2 gap-3">
+          {offices && offices.length > 0 ? (
+            offices.map((office) => (
+              <div
+                key={office.id}
+                className="flex flex-col gap-2 p-3 bg-background border border-border rounded-sm hover:border-accent transition-colors"
+              >
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center gap-2">
+                    <div
+                      className="h-3 w-3 rounded-full"
+                      style={{ backgroundColor: office.color }}
+                    />
+                    <div>
+                      <span className="font-mono text-sm text-foreground block">
+                        {office.abbreviation}
+                      </span>
+                      <span className="font-mono text-[10px] text-muted-foreground">
+                        {office.name}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between text-[10px]">
+                  <span className="font-mono text-muted-foreground">
+                    {office.counters} counters
+                  </span>
+                  <button
+                    onClick={() => startEdit(office)}
+                    className="px-2 py-1 bg-secondary border border-border rounded-sm font-mono text-[10px] uppercase tracking-widest text-muted-foreground hover:bg-border transition-colors"
+                  >
+                    Edit
+                  </button>
+                </div>
+              </div>
+            ))
+          ) : (
+            <div className="col-span-full text-center py-6">
+              <span className="font-mono text-[10px] text-muted-foreground">
+                No offices yet. Add one to get started.
+              </span>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Modal */}
+      <AnimatePresence>
+        {isModalOpen && (
+          <>
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={closeModal}
+              className="fixed inset-0 bg-black/50 z-40"
+            />
+
+            {/* Modal Content */}
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="fixed inset-0 flex items-center justify-center z-50 p-4"
+            >
+              <div className="bg-background border border-border rounded-sm w-full max-w-md max-h-[90vh] overflow-y-auto">
+                {/* Modal Header */}
+                <div className="flex items-center justify-between px-6 py-4 border-b border-border sticky top-0 bg-background">
+                  <h2 className="font-mono text-sm uppercase tracking-widest text-foreground">
+                    {isAddMode ? "Add Office" : "Edit Office"}
+                  </h2>
+                  <button
+                    onClick={closeModal}
+                    className="text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    <X size={18} />
+                  </button>
+                </div>
+
+                {/* Modal Body */}
+                <form onSubmit={handleSubmit} className="p-6 flex flex-col gap-4">
+                  {/* Error Message */}
                   {error && (
-                    <div className="px-2 py-1.5 bg-destructive/10 border border-destructive rounded-sm">
+                    <div className="px-3 py-2 bg-destructive/10 border border-destructive rounded-sm">
                       <span className="font-mono text-[10px] text-destructive uppercase tracking-widest">
                         {error}
                       </span>
                     </div>
                   )}
 
+                  {/* ID */}
+                  <div className="flex flex-col gap-1.5">
+                    <label className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+                      Office ID
+                    </label>
+                    <input
+                      type="text"
+                      disabled={!isAddMode}
+                      value={formData.id}
+                      onChange={(e) =>
+                        setFormData({ ...formData, id: e.target.value })
+                      }
+                      className="px-3 py-2 bg-secondary border border-border rounded-sm font-mono text-sm disabled:opacity-50"
+                      placeholder="e.g. hr"
+                      required
+                    />
+                  </div>
+
+                  {/* Name */}
+                  <div className="flex flex-col gap-1.5">
+                    <label className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+                      Office Name
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.name}
+                      onChange={(e) =>
+                        setFormData({ ...formData, name: e.target.value })
+                      }
+                      className="px-3 py-2 bg-secondary border border-border rounded-sm font-mono text-sm"
+                      placeholder="e.g. Human Resources"
+                      required
+                    />
+                  </div>
+
+                  {/* Abbreviation and Prefix */}
                   <div className="grid grid-cols-2 gap-3">
-                    {/* ID - readonly when editing */}
-                    <div className="flex flex-col gap-1">
-                      <label className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
-                        ID
-                      </label>
-                      <input
-                        type="text"
-                        disabled={!isAddMode}
-                        value={formData.id}
-                        onChange={(e) => setFormData({ ...formData, id: e.target.value })}
-                        className="px-2 py-1.5 bg-background border border-border rounded-sm font-mono text-xs disabled:opacity-50"
-                        placeholder="e.g. hr"
-                        required
-                      />
-                    </div>
-
-                    {/* Name */}
-                    <div className="flex flex-col gap-1">
-                      <label className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
-                        Name
-                      </label>
-                      <input
-                        type="text"
-                        value={formData.name}
-                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                        className="px-2 py-1.5 bg-background border border-border rounded-sm font-mono text-xs"
-                        placeholder="e.g. Human Resources"
-                        required
-                      />
-                    </div>
-
-                    {/* Abbreviation */}
-                    <div className="flex flex-col gap-1">
+                    <div className="flex flex-col gap-1.5">
                       <label className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
                         Abbreviation
                       </label>
                       <input
                         type="text"
                         value={formData.abbreviation}
-                        onChange={(e) => setFormData({ ...formData, abbreviation: e.target.value.toUpperCase() })}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            abbreviation: e.target.value.toUpperCase(),
+                          })
+                        }
                         maxLength={3}
-                        className="px-2 py-1.5 bg-background border border-border rounded-sm font-mono text-xs"
-                        placeholder="e.g. HR"
+                        className="px-3 py-2 bg-secondary border border-border rounded-sm font-mono text-sm"
+                        placeholder="HR"
                         required
                       />
                     </div>
-
-                    {/* Prefix */}
-                    <div className="flex flex-col gap-1">
+                    <div className="flex flex-col gap-1.5">
                       <label className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
                         Prefix
                       </label>
                       <input
                         type="text"
                         value={formData.prefix}
-                        onChange={(e) => setFormData({ ...formData, prefix: e.target.value.toUpperCase() })}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            prefix: e.target.value.toUpperCase(),
+                          })
+                        }
                         maxLength={3}
-                        className="px-2 py-1.5 bg-background border border-border rounded-sm font-mono text-xs"
-                        placeholder="e.g. HR"
+                        className="px-3 py-2 bg-secondary border border-border rounded-sm font-mono text-sm"
+                        placeholder="HR"
                         required
                       />
                     </div>
+                  </div>
 
-                    {/* Color */}
-                    <div className="flex flex-col gap-1">
+                  {/* PIN and Counters */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="flex flex-col gap-1.5">
                       <label className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
-                        Color
+                        Operator PIN
                       </label>
-                      <div className="flex gap-1 flex-wrap">
-                        {DEFAULT_COLORS.map((color) => (
-                          <button
-                            key={color}
-                            type="button"
-                            onClick={() => setFormData({ ...formData, color })}
-                            className={`h-6 w-6 rounded-sm border-2 transition-all ${
-                              formData.color === color ? "border-foreground" : "border-border"
-                            }`}
-                            style={{ backgroundColor: color }}
-                          />
-                        ))}
-                      </div>
+                      <input
+                        type="text"
+                        value={formData.pin}
+                        onChange={(e) =>
+                          setFormData({ ...formData, pin: e.target.value })
+                        }
+                        className="px-3 py-2 bg-secondary border border-border rounded-sm font-mono text-sm"
+                        placeholder="e.g. 1234"
+                        required
+                      />
                     </div>
-
-                    {/* Counters */}
-                    <div className="flex flex-col gap-1">
+                    <div className="flex flex-col gap-1.5">
                       <label className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
                         Counters
                       </label>
@@ -317,91 +408,67 @@ export default function OfficeManager({ offices, onMutate }: OfficeManagerProps)
                         min="1"
                         max="6"
                         value={formData.counters}
-                        onChange={(e) => setFormData({ ...formData, counters: Number(e.target.value) })}
-                        className="px-2 py-1.5 bg-background border border-border rounded-sm font-mono text-xs"
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            counters: Number(e.target.value),
+                          })
+                        }
+                        className="px-3 py-2 bg-secondary border border-border rounded-sm font-mono text-sm"
                         required
                       />
                     </div>
                   </div>
 
-                  <div className="flex gap-2 pt-2">
+                  {/* Color Picker */}
+                  <div className="flex flex-col gap-1.5">
+                    <label className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+                      Color
+                    </label>
+                    <div className="flex gap-2 flex-wrap">
+                      {DEFAULT_COLORS.map((color) => (
+                        <button
+                          key={color}
+                          type="button"
+                          onClick={() => setFormData({ ...formData, color })}
+                          className={`h-8 w-8 rounded-sm border-2 transition-all ${
+                            formData.color === color
+                              ? "border-foreground scale-110"
+                              : "border-border"
+                          }`}
+                          style={{ backgroundColor: color }}
+                          title={color}
+                        />
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex gap-2 pt-4 border-t border-border">
                     <button
                       type="submit"
                       disabled={loading}
-                      className="flex-1 px-3 py-1.5 bg-primary text-primary-foreground font-mono text-xs uppercase tracking-widest rounded-sm hover:opacity-90 transition-opacity disabled:opacity-50"
+                      className="flex-1 px-4 py-2 bg-primary text-primary-foreground font-mono text-xs uppercase tracking-widest rounded-sm hover:opacity-90 transition-opacity disabled:opacity-50"
                     >
-                      {loading ? "..." : isAddMode ? "Add Office" : "Update Office"}
+                      {loading ? "..." : isAddMode ? "Add Office" : "Update"}
                     </button>
                     {editingId && (
                       <button
                         type="button"
                         onClick={() => handleDelete(editingId)}
                         disabled={loading}
-                        className="px-3 py-1.5 border border-destructive text-destructive font-mono text-xs uppercase tracking-widest rounded-sm hover:bg-destructive/10 transition-colors disabled:opacity-50"
+                        className="px-4 py-2 border border-destructive text-destructive font-mono text-xs uppercase tracking-widest rounded-sm hover:bg-destructive/10 transition-colors disabled:opacity-50"
                       >
                         Delete
                       </button>
                     )}
                   </div>
                 </form>
-              )}
-
-              {/* Offices List */}
-              <div className="flex flex-col gap-2">
-                {offices && offices.length > 0 ? (
-                  offices.map((office) => (
-                    <div
-                      key={office.id}
-                      className="flex items-center justify-between px-3 py-2 bg-background border border-border rounded-sm hover:border-border/80 transition-colors"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div
-                          className="h-2 w-2 rounded-full"
-                          style={{ backgroundColor: office.color }}
-                        />
-                        <div className="flex flex-col gap-0.5">
-                          <span className="font-mono text-xs text-foreground">
-                            {office.abbreviation}
-                          </span>
-                          <span className="font-mono text-[10px] text-muted-foreground">
-                            {office.name}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <span className="font-mono text-[10px] text-muted-foreground">
-                          {office.counters} counters
-                        </span>
-                        <button
-                          onClick={() => startEdit(office)}
-                          className="px-2 py-1 text-[10px] bg-secondary border border-border rounded-sm font-mono uppercase tracking-widest text-muted-foreground hover:bg-border transition-colors disabled:opacity-50"
-                          disabled={loading}
-                        >
-                          Edit
-                        </button>
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <span className="font-mono text-[10px] text-muted-foreground text-center py-2">
-                    No offices found
-                  </span>
-                )}
               </div>
-
-              {/* Add button */}
-              {!isAddMode && !editingId && (
-                <button
-                  onClick={startAdd}
-                  className="w-full px-3 py-2 bg-background border border-border rounded-sm font-mono text-xs uppercase tracking-widest text-foreground hover:bg-secondary transition-colors"
-                >
-                  + Add Office
-                </button>
-              )}
-            </div>
-          </motion.div>
+            </motion.div>
+          </>
         )}
       </AnimatePresence>
-    </div>
+    </>
   )
 }
