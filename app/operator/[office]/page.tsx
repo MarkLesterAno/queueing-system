@@ -27,7 +27,6 @@ export default function OfficeAdminPage({
           return
         }
         const data = await res.json()
-        console.log(data)
         setOffice({
           id: data.office.id,
           name: data.office.name,
@@ -35,7 +34,7 @@ export default function OfficeAdminPage({
           prefix: data.office.prefix,
           color: data.office.color,
           counters: data.counterCount,
-          pin: data.office.pin,
+          pin: "ADMIN_PIN",
         })
         setLoading(false)
       } catch (err) {
