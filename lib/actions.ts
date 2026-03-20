@@ -212,7 +212,7 @@ export async function setOfficeCounters(officeId: string, count: number): Promis
 // ── PIN verification ──────────────────────────────────────────────
 
 export async function verifyOfficePin(officeId: string, pin: string): Promise<boolean> {
-  const office = getOffice(officeId)
+  const office = await getStoredOfficeById(officeId)
   if (!office) return false
   const envPin = office.pin || process.env.ADMIN_PIN || "1234"
   return pin === envPin
