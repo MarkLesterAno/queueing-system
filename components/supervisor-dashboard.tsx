@@ -1,8 +1,11 @@
 "use client"
 
 import { useAllOffices } from "@/hooks/use-queue"
+import { motion } from "framer-motion"
 import Link from "next/link"
 import OfficeManager from "./office-manager"
+import { StatCard } from "./stat-card"
+import { OfficeRow } from "./office-row"
 
 interface OfficeStat {
   officeId: string
@@ -104,9 +107,22 @@ export default function SupervisorDashboard() {
         </div>
       </header>
 
-      {/* Main content - Office Manager */}
+      {/* Global stats strip */}
+      <div className="flex items-center gap-8 px-6 py-4 border-b border-border bg-secondary/30">
+        <StatCard label="Total Waiting" value={totalWaiting} />
+        <StatCard label="Currently Active" value={totalActive} />
+        <StatCard label="Total Served" value={totalServed} />
+        <div className="ml-auto">
+          <span className="font-mono text-[10px] text-muted-foreground tabular-nums">
+            {new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+          </span>
+        </div>
+      </div>
+
+      {/* Office rows */}
       <main className="flex-1 p-6">
-        <div className="max-w-6xl mx-auto">
+        <div className="max-w-5xl mx-auto flex flex-col gap-4">
+          {/* Office Manager Section */}
           <OfficeManager 
             offices={offices.map((o) => ({
               id: o.officeId,
@@ -115,15 +131,14 @@ export default function SupervisorDashboard() {
               prefix: o.abbreviation,
               color: o.color,
               counters: o.totalCounters,
-              queueDepth: o.queueDepth,
-              avgWaitMinutes: o.avgWaitMinutes,
-              ticketsServed: o.ticketsServed,
-              activeTickets: o.activeTickets,
-              totalCounters: o.totalCounters,
-              idleCounters: o.idleCounters,
             }))}
             onMutate={() => mutate()} 
           />
+
+          {/* Office Rows */}
+          {offices.map((stat) => (
+            <OfficeRow key={stat.officeId} stat={stat} onMutate={() => mutate()} />
+          ))}
         </div>
       </main>
 
