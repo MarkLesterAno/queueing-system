@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
-import { getOfficeTickets, getOfficeServing, getOfficeCounterCount } from "@/lib/actions"
-import { getOffice, getEstimatedWait, OFFICES } from "@/lib/queue"
+import { getOfficeTickets, getOfficeServing, getOfficeCounterCount, getStoredOffices } from "@/lib/actions"
+import { getEstimatedWait } from "@/lib/queue"
 
 export const dynamic = "force-dynamic"
 
@@ -9,7 +9,8 @@ export async function GET(
   { params }: { params: Promise<{ office: string }> }
 ) {
   const { office: officeId } = await params
-  const office = getOffice(officeId)
+  const offices = await getStoredOffices()
+  const office = offices.find((o) => o.id === officeId)
   if (!office) {
     return NextResponse.json({ error: "Office not found" }, { status: 404 })
   }

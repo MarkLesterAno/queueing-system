@@ -289,6 +289,11 @@ export async function getStoredOffices(): Promise<typeof OFFICES> {
   return stored || OFFICES
 }
 
+export async function getStoredOfficeById(id: string) {
+  const offices = await getStoredOffices()
+  return offices.find((o) => o.id === id) || null
+}
+
 export async function addOffice(
   id: string,
   name: string,

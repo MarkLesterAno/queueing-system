@@ -35,6 +35,7 @@ export default function OfficeManager({ offices, onMutate }: OfficeManagerProps)
   const [isAddMode, setIsAddMode] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string>("")
   const [formData, setFormData] = useState<OfficeFormData>({
     id: "",
     name: "",
@@ -55,6 +56,44 @@ export default function OfficeManager({ offices, onMutate }: OfficeManagerProps)
     })
     setEditingId(null)
     setIsAddMode(false)
+    setError("")
+  }
+
+  const validateForm = (): boolean => {
+    if (!formData.id.trim()) {
+      setError("Office ID is required")
+      return false
+    }
+    if (!formData.name.trim()) {
+      setError("Office name is required")
+      return false
+    }
+    if (!formData.abbreviation.trim()) {
+      setError("Abbreviation is required")
+      return false
+    }
+    if (formData.abbreviation.length > 3) {
+      setError("Abbreviation must be 3 characters or less")
+      return false
+    }
+    if (!formData.prefix.trim()) {
+      setError("Prefix is required")
+      return false
+    }
+    if (formData.prefix.length > 3) {
+      setError("Prefix must be 3 characters or less")
+      return false
+    }
+    if (formData.counters < 1 || formData.counters > 6) {
+      setError("Counters must be between 1 and 6")
+      return false
+    }
+    if (isAddMode && offices.find((o: any) => o.id === formData.id)) {
+      setError("Office ID already exists")
+      return false
+    }
+    setError("")
+    return true
   }
 
   const startAdd = () => {
@@ -77,15 +116,18 @@ export default function OfficeManager({ offices, onMutate }: OfficeManagerProps)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    
+    if (!validateForm()) return
+
     setLoading(true)
 
     try {
       if (isAddMode) {
         const success = await addOffice(
-          formData.id,
-          formData.name,
-          formData.abbreviation,
-          formData.prefix,
+          formData.id.trim().toLowerCase(),
+          formData.name.trim(),
+          formData.abbreviation.trim().toUpperCase(),
+          formData.prefix.trim().toUpperCase(),
           formData.color,
           formData.counters
         )
@@ -93,21 +135,26 @@ export default function OfficeManager({ offices, onMutate }: OfficeManagerProps)
           resetForm()
           onMutate()
         } else {
-          alert("Office ID already exists")
+          setError("Failed to add office. Office ID may already exist.")
         }
       } else if (editingId) {
         const success = await updateOffice(editingId, {
-          name: formData.name,
-          abbreviation: formData.abbreviation,
-          prefix: formData.prefix,
+          name: formData.name.trim(),
+          abbreviation: formData.abbreviation.trim().toUpperCase(),
+          prefix: formData.prefix.trim().toUpperCase(),
           color: formData.color,
           counters: formData.counters,
         })
         if (success) {
           resetForm()
           onMutate()
+        } else {
+          setError("Failed to update office.")
         }
       }
+    } catch (err) {
+      setError("An error occurred. Please try again.")
+      console.error("[v0] Office operation error:", err)
     } finally {
       setLoading(false)
     }
@@ -167,6 +214,14 @@ export default function OfficeManager({ offices, onMutate }: OfficeManagerProps)
                       <X size={16} />
                     </button>
                   </div>
+
+                  {error && (
+                    <div className="px-2 py-1.5 bg-destructive/10 border border-destructive rounded-sm">
+                      <span className="font-mono text-[10px] text-destructive uppercase tracking-widest">
+                        {error}
+                      </span>
+                    </div>
+                  )}
 
                   <div className="grid grid-cols-2 gap-3">
                     {/* ID - readonly when editing */}
