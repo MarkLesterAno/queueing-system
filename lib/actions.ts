@@ -214,8 +214,8 @@ export async function setOfficeCounters(officeId: string, count: number): Promis
 export async function verifyOfficePin(officeId: string, pin: string): Promise<boolean> {
   const office = getOffice(officeId)
   if (!office) return false
-  const envPin = process.env[office.pin] || process.env.ADMIN_PIN || "1234"
-  return pin === '1234'
+  const envPin = office.pin || process.env.ADMIN_PIN || "1234"
+  return pin === envPin
 }
 
 export async function verifySupervisorPin(pin: string): Promise<boolean> {
@@ -234,16 +234,16 @@ export async function transferTicket(
   if (!toOffice) return null
 
   const toKeys = officeKeys(toOfficeId)
-  
+
   const fromTickets = await getOfficeTickets(fromOfficeId)
   const toTickets = await getOfficeTickets(toOfficeId)
   const fromServing = await getOfficeServing(fromOfficeId)
-  
+
   const ticketIdx = fromTickets.findIndex((t) => t.id === ticketId)
   if (ticketIdx === -1) return null
 
   const ticket = fromTickets[ticketIdx]
-  
+
   // Allow transfer for serving or done tickets
   if (ticket.status !== "serving" && ticket.status !== "done") return null
 
@@ -251,7 +251,7 @@ export async function transferTicket(
   if (ticket.status === "serving") {
     ticket.status = "done"
     ticket.doneAt = Date.now()
-    
+
     // Clear from serving state
     if (ticket.counter) {
       fromServing[ticket.counter] = null
@@ -276,7 +276,7 @@ export async function transferTicket(
   await redis.set(toKeys.TICKETS, toTickets)
   await completeTicket(fromOfficeId, ticketId)
 
-  
+
   return newTicket
 }
 
@@ -289,13 +289,19 @@ export async function getStoredOffices(): Promise<typeof OFFICES> {
   return stored || OFFICES
 }
 
+export async function getStoredOfficeById(id: string) {
+  const offices = await getStoredOffices()
+  return offices.find((o) => o.id === id) || null
+}
+
 export async function addOffice(
   id: string,
   name: string,
   abbreviation: string,
   prefix: string,
   color: string,
-  counters: number
+  counters: number,
+  pin: string
 ): Promise<boolean> {
   const offices = await getStoredOffices()
   if (offices.find((o) => o.id === id)) return false
@@ -307,7 +313,7 @@ export async function addOffice(
     prefix,
     color,
     counters,
-    pin: "ADMIN_PIN",
+    pin,
   })
 
   await redis.set(OFFICES_KEY, offices)
@@ -316,7 +322,7 @@ export async function addOffice(
 
 export async function updateOffice(
   id: string,
-  updates: { name?: string; abbreviation?: string; prefix?: string; color?: string; counters?: number }
+  updates: { name?: string; abbreviation?: string; prefix?: string; color?: string; counters?: number; pin?: string }
 ): Promise<boolean> {
   const offices = await getStoredOffices()
   const office = offices.find((o) => o.id === id)
@@ -326,6 +332,7 @@ export async function updateOffice(
   if (updates.abbreviation) office.abbreviation = updates.abbreviation
   if (updates.prefix) office.prefix = updates.prefix
   if (updates.color) office.color = updates.color
+  if (updates.pin) office.pin = updates.pin
   if (updates.counters !== undefined) {
     const keys = officeKeys(id)
     await setOfficeCounters(id, updates.counters)

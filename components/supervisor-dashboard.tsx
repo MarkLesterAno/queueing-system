@@ -257,7 +257,17 @@ export default function SupervisorDashboard() {
       <main className="flex-1 p-6">
         <div className="max-w-5xl mx-auto flex flex-col gap-4">
           {/* Office Manager Section */}
-          <OfficeManager offices={offices} onMutate={() => mutate()} />
+          <OfficeManager 
+            offices={offices.map((o) => ({
+              id: o.officeId,
+              name: o.name,
+              abbreviation: o.abbreviation,
+              prefix: o.abbreviation,
+              color: o.color,
+              counters: o.totalCounters,
+            }))}
+            onMutate={() => mutate()} 
+          />
 
           {/* Office Rows */}
           {offices.map((stat) => (

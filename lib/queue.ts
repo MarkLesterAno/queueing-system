@@ -40,6 +40,8 @@ export const OFFICES: Office[] = [
   { id: "admin", name: "Administration", abbreviation: "ADM", prefix: "ADM", color: "#8B6B6B", counters: 1, pin: "ADMIN_PIN_ADM" },
 ]
 
+// Note: This returns from static OFFICES array. For dynamic office lookup in server actions,
+// use getStoredOffices() from @/lib/actions instead.
 export function getOffice(id: string): Office | undefined {
   return OFFICES.find((o) => o.id === id)
 }
