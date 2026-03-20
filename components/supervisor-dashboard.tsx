@@ -6,6 +6,7 @@ import { OFFICES } from "@/lib/queue"
 import { motion } from "framer-motion"
 import { useState, useCallback } from "react"
 import Link from "next/link"
+import OfficeManager from "./office-manager"
 
 interface OfficeStat {
   officeId: string
@@ -255,6 +256,10 @@ export default function SupervisorDashboard() {
       {/* Office rows */}
       <main className="flex-1 p-6">
         <div className="max-w-5xl mx-auto flex flex-col gap-4">
+          {/* Office Manager Section */}
+          <OfficeManager offices={offices} onMutate={() => mutate()} />
+
+          {/* Office Rows */}
           {offices.map((stat) => (
             <OfficeRow key={stat.officeId} stat={stat} onMutate={() => mutate()} />
           ))}
