@@ -9,7 +9,7 @@ import Link from "next/link"
 import OfficeManager from "./office-manager"
 
 interface OfficeStat {
-  officeId: string
+  id: string
   name: string
   abbreviation: string
   color: string
@@ -69,7 +69,7 @@ function OfficeRow({
     const newCount = Math.max(1, Math.min(6, stat.totalCounters + delta))
     if (newCount === stat.totalCounters) return
     setAdjusting(true)
-    await setOfficeCounters(stat.officeId, newCount)
+    await setOfficeCounters(stat.id, newCount)
     onMutate()
     setAdjusting(false)
   }
@@ -81,7 +81,7 @@ function OfficeRow({
       )
     )
       return
-    await resetOfficeQueue(stat.officeId)
+    await resetOfficeQueue(stat.id)
     onMutate()
   }
 
@@ -103,13 +103,13 @@ function OfficeRow({
         </div>
         <div className="flex items-center gap-2">
           <Link
-            href={`/operator/${stat.officeId}`}
+            href={`/operator/${stat.id}`}
             className="px-2 py-1 rounded-sm border border-border font-mono text-[10px] uppercase tracking-widest text-muted-foreground hover:text-foreground hover:border-foreground/30 transition-colors"
           >
             Operator
           </Link>
           <Link
-            href={`/display/${stat.officeId}`}
+            href={`/display/${stat.id}`}
             className="px-2 py-1 rounded-sm border border-border font-mono text-[10px] uppercase tracking-widest text-muted-foreground hover:text-foreground hover:border-foreground/30 transition-colors"
           >
             Display
@@ -200,6 +200,7 @@ function exportCSV(offices: OfficeStat[]) {
 export default function SupervisorDashboard() {
   const { data, isLoading, mutate } = useAllOffices(3000)
 
+
   if (isLoading || !data) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -257,21 +258,11 @@ export default function SupervisorDashboard() {
       <main className="flex-1 p-6">
         <div className="max-w-5xl mx-auto flex flex-col gap-4">
           {/* Office Manager Section */}
-          <OfficeManager 
-            offices={offices.map((o) => ({
-              id: o.officeId,
-              name: o.name,
-              abbreviation: o.abbreviation,
-              prefix: o.abbreviation,
-              color: o.color,
-              counters: o.totalCounters,
-            }))}
-            onMutate={() => mutate()} 
-          />
+          <OfficeManager offices={offices} onMutate={() => mutate()} />
 
           {/* Office Rows */}
           {offices.map((stat) => (
-            <OfficeRow key={stat.officeId} stat={stat} onMutate={() => mutate()} />
+            <OfficeRow key={stat.id} stat={stat} onMutate={() => mutate()} />
           ))}
         </div>
       </main>
