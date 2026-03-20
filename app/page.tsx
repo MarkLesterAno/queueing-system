@@ -6,7 +6,7 @@ export default function HomePage() {
     <div className="min-h-screen flex flex-col bg-background">
       {/* Header */}
       <header className="flex items-center px-6 py-4 border-b border-border">
-        <span className="font-mono text-xs uppercase tracking-[0.2em] text-muted-foreground">
+        <span className="font-mono text-sm uppercase tracking-[0.2em] text-muted-foreground">
           QueueFlow
         </span>
       </header>

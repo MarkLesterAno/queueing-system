@@ -50,7 +50,7 @@ export function officeKeys(officeId: string) {
     TICKETS: `queue:${officeId}:tickets`,
     NEXT_SEQ: `queue:${officeId}:next_seq`,
     SERVING: `queue:${officeId}:serving`,
-    COUNTERS: `queue:${officeId}:counters`, // number of active counters
+    COUNTERS: `queue:${officeId}:counters`,
   }
 }
 
