@@ -44,7 +44,7 @@ export default function OfficeManager({ offices, onMutate }: OfficeManagerProps)
     prefix: "",
     color: DEFAULT_COLORS[0],
     counters: 2,
-    pin: "",
+    pin: "1234",
   })
 
   const resetForm = () => {
@@ -55,7 +55,7 @@ export default function OfficeManager({ offices, onMutate }: OfficeManagerProps)
       prefix: "",
       color: DEFAULT_COLORS[0],
       counters: 2,
-      pin: "",
+      pin: "1234",
     })
     setEditingId(null)
     setIsAddMode(false)
@@ -215,7 +215,8 @@ export default function OfficeManager({ offices, onMutate }: OfficeManagerProps)
         <div className="p-4 bg-secondary/50 grid grid-cols-1 md:grid-cols-2 gap-3">
           {offices && offices.length > 0 ? (
             offices.map((office) => (
-              <div key={office.id}
+              <div
+                key={office.id}
                 className="flex flex-col gap-2 p-3 bg-background border border-border rounded-sm hover:border-accent transition-colors"
               >
                 <div className="flex items-start justify-between">
@@ -388,7 +389,7 @@ export default function OfficeManager({ offices, onMutate }: OfficeManagerProps)
                         Operator PIN
                       </label>
                       <input
-                        type="password"
+                        type="text"
                         value={formData.pin}
                         onChange={(e) =>
                           setFormData({ ...formData, pin: e.target.value })
