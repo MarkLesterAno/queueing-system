@@ -2,8 +2,8 @@
 
 import { useEffect, useState, useCallback, useRef } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { getOffice, OFFICES } from "@/lib/queue"
 import TextToSpeech from "@/components/tts-narrator"
+import type { Office } from "@/lib/queue"
 
 interface DisplayData {
   office: { id: string; name: string; abbreviation: string; color: string }
@@ -126,19 +126,53 @@ export default function OfficeDisplayPage({
   params: Promise<{ office: string }>
 }) {
   const [officeId, setOfficeId] = useState<string>("")
+  const [office, setOffice] = useState<Office | null>(null)
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    params.then((p) => setOfficeId(p.office))
+    params.then(async (p) => {
+      setOfficeId(p.office)
+      try {
+        const res = await fetch(`/api/queue/${p.office}`)
+        if (!res.ok) {
+          setLoading(false)
+          return
+        }
+        const data = await res.json()
+        setOffice({
+          id: data.office.id,
+          name: data.office.name,
+          abbreviation: data.office.abbreviation,
+          prefix: data.office.prefix,
+          color: data.office.color,
+          counters: data.counterCount,
+          pin: "ADMIN_PIN",
+        })
+        setLoading(false)
+      } catch (err) {
+        console.error("[v0] Failed to fetch office:", err)
+        setLoading(false)
+      }
+    })
   }, [params])
 
   const data = useSSE(officeId)
-  const office = getOffice(officeId)
 
-  if (!officeId || !office) {
+  if (!officeId || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <span className="font-mono text-xs text-muted-foreground uppercase tracking-widest">
           Loading...
+        </span>
+      </div>
+    )
+  }
+
+  if (!office) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <span className="font-mono text-xs text-destructive uppercase tracking-widest">
+          Office not found
         </span>
       </div>
     )
