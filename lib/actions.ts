@@ -280,11 +280,85 @@ export async function transferTicket(
   return newTicket
 }
 
+// ── Office management (supervisor) ────────────────────────────────
+
+const OFFICES_KEY = "system:offices"
+
+export async function getStoredOffices(): Promise<typeof OFFICES> {
+  const stored = await redis.get<typeof OFFICES>(OFFICES_KEY)
+  return stored || OFFICES
+}
+
+export async function addOffice(
+  id: string,
+  name: string,
+  abbreviation: string,
+  prefix: string,
+  color: string,
+  counters: number
+): Promise<boolean> {
+  const offices = await getStoredOffices()
+  if (offices.find((o) => o.id === id)) return false
+
+  offices.push({
+    id,
+    name,
+    abbreviation,
+    prefix,
+    color,
+    counters,
+    pin: "ADMIN_PIN",
+  })
+
+  await redis.set(OFFICES_KEY, offices)
+  return true
+}
+
+export async function updateOffice(
+  id: string,
+  updates: { name?: string; abbreviation?: string; prefix?: string; color?: string; counters?: number }
+): Promise<boolean> {
+  const offices = await getStoredOffices()
+  const office = offices.find((o) => o.id === id)
+  if (!office) return false
+
+  if (updates.name) office.name = updates.name
+  if (updates.abbreviation) office.abbreviation = updates.abbreviation
+  if (updates.prefix) office.prefix = updates.prefix
+  if (updates.color) office.color = updates.color
+  if (updates.counters !== undefined) {
+    const keys = officeKeys(id)
+    await setOfficeCounters(id, updates.counters)
+  }
+
+  await redis.set(OFFICES_KEY, offices)
+  return true
+}
+
+export async function deleteOffice(id: string): Promise<boolean> {
+  const offices = await getStoredOffices()
+  const idx = offices.findIndex((o) => o.id === id)
+  if (idx === -1) return false
+
+  offices.splice(idx, 1)
+  await redis.set(OFFICES_KEY, offices)
+
+  // Clear all queue data for deleted office
+  const keys = officeKeys(id)
+  await redis.del(keys.TICKETS)
+  await redis.del(keys.NEXT_SEQ)
+  await redis.del(keys.SERVING)
+  await redis.del(keys.COUNTERS)
+
+  return true
+}
+
 // ── Aggregate data (supervisor) ───────────────────────────────────
 
 export async function getAllOfficeStats() {
+  const offices = await getStoredOffices()
   const stats = await Promise.all(
-    OFFICES.map(async (office) => {
+    offices.map(async (office) => {
       const tickets = await getOfficeTickets(office.id)
       const serving = await getOfficeServing(office.id)
       const counterCount = await getOfficeCounterCount(office.id)
