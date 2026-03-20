@@ -214,8 +214,8 @@ export async function setOfficeCounters(officeId: string, count: number): Promis
 export async function verifyOfficePin(officeId: string, pin: string): Promise<boolean> {
   const office = getOffice(officeId)
   if (!office) return false
-  const envPin = process.env[office.pin] || process.env.ADMIN_PIN || "1234"
-  return pin === '1234'
+  const envPin = office.pin || process.env.ADMIN_PIN || "1234"
+  return pin === envPin
 }
 
 export async function verifySupervisorPin(pin: string): Promise<boolean> {
@@ -234,16 +234,16 @@ export async function transferTicket(
   if (!toOffice) return null
 
   const toKeys = officeKeys(toOfficeId)
-  
+
   const fromTickets = await getOfficeTickets(fromOfficeId)
   const toTickets = await getOfficeTickets(toOfficeId)
   const fromServing = await getOfficeServing(fromOfficeId)
-  
+
   const ticketIdx = fromTickets.findIndex((t) => t.id === ticketId)
   if (ticketIdx === -1) return null
 
   const ticket = fromTickets[ticketIdx]
-  
+
   // Allow transfer for serving or done tickets
   if (ticket.status !== "serving" && ticket.status !== "done") return null
 
@@ -251,7 +251,7 @@ export async function transferTicket(
   if (ticket.status === "serving") {
     ticket.status = "done"
     ticket.doneAt = Date.now()
-    
+
     // Clear from serving state
     if (ticket.counter) {
       fromServing[ticket.counter] = null
@@ -276,7 +276,7 @@ export async function transferTicket(
   await redis.set(toKeys.TICKETS, toTickets)
   await completeTicket(fromOfficeId, ticketId)
 
-  
+
   return newTicket
 }
 
