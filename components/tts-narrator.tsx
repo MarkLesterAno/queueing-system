@@ -25,7 +25,6 @@ export default function TextToSpeech({
     if (typeof window === "undefined") return;
     if (!text) return;
     
-
     // ✅ Skip speaking on first render
     if (isFirstRender.current) {
       isFirstRender.current = false;
@@ -34,11 +33,11 @@ export default function TextToSpeech({
       return;
     }
 
-    console.log(prevRecallRef.current, recall)
+    // ✅ Speak if either text OR recall changed (not both unchanged)
+    const textChanged = prevTextRef.current !== text
+    const recallChanged = prevRecallRef.current !== recall
 
-    // ✅ Speak only if text or recall actually changed
-    if (prevTextRef.current === text) return;
-    if (prevRecallRef.current === recall) return;
+    if (!textChanged && !recallChanged) return;
 
     window.speechSynthesis.cancel();
 
@@ -51,7 +50,7 @@ export default function TextToSpeech({
 
     prevTextRef.current = text;
     prevRecallRef.current = recall;
-  }, [text, rate, pitch, volume]);
+  }, [text, recall, rate, pitch, volume]);
 
   return null; // headless component
 }
