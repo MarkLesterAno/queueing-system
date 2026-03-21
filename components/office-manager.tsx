@@ -32,8 +32,8 @@ export default function OfficeManager({
     abbreviation: "",
     prefix: "",
     color: DEFAULT_COLORS[0],
-    counters: 2,
-    pin: "1234",
+    counters: 0,
+    pin: "",
   });
 
   const resetForm = () => {
@@ -43,8 +43,8 @@ export default function OfficeManager({
       abbreviation: "",
       prefix: "",
       color: DEFAULT_COLORS[0],
-      counters: 2,
-      pin: "1234",
+      counters: 0,
+      pin: "",
     });
     setEditingId(null);
     setIsAddMode(false);
