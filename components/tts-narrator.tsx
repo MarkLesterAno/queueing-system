@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 
 type TextToSpeechProps = {
   text: string;
+  isActive: boolean;
   rate?: number;
   pitch?: number;
   volume?: number;
@@ -11,11 +12,13 @@ type TextToSpeechProps = {
 
 export default function TextToSpeech({
   text,
+  isActive,
   rate = 1,
   pitch = 1,
   volume = 1,
 }: TextToSpeechProps) {
   const prevTextRef = useRef<string | null>(null);
+  const prevActiveRef = useRef<boolean>(false);
   const isFirstRenderRef = useRef(true);
 
   useEffect(() => {
@@ -26,11 +29,17 @@ export default function TextToSpeech({
     if (isFirstRenderRef.current) {
       isFirstRenderRef.current = false;
       prevTextRef.current = text;
+      prevActiveRef.current = isActive;
       return;
     }
 
-    // Only speak if the ticket number actually changed
-    if (prevTextRef.current === text) return;
+    // Speak if:
+    // 1. Ticket number changed (new ticket called)
+    // 2. OR same ticket became active again (recall)
+    const textChanged = prevTextRef.current !== text;
+    const becameActive = !prevActiveRef.current && isActive;
+
+    if (!textChanged && !becameActive) return;
 
     window.speechSynthesis.cancel();
 
@@ -42,7 +51,8 @@ export default function TextToSpeech({
     window.speechSynthesis.speak(utterance);
 
     prevTextRef.current = text;
-  }, [text, rate, pitch, volume]);
+    prevActiveRef.current = isActive;
+  }, [text, isActive, rate, pitch, volume]);
 
   return null; // headless component
 }

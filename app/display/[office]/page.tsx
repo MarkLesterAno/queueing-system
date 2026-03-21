@@ -71,6 +71,7 @@ function CounterDisplay({
   const prefix = ticketId ? ticketId.split("-")[0] : null
   const num = ticketId ? ticketId.split("-")[1] : null
   const ttsText = num ? num : ""
+  const isActive = !!ticketId
 
   return (
     <div className="flex flex-col items-center gap-4 px-6 py-10 flex-1">
@@ -108,7 +109,7 @@ function CounterDisplay({
           )}
         </motion.div>
       </AnimatePresence>
-      <TextToSpeech text={ttsText} />
+      <TextToSpeech text={ttsText} isActive={isActive} />
 
       <span
         className="font-mono text-[10px] uppercase tracking-widest"
