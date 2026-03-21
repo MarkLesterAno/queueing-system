@@ -101,13 +101,20 @@ export async function callNext(officeId: string, counter: number): Promise<Ticke
   return next
 }
 
-export async function recallTicket(officeId: string, ticketId: string): Promise<Ticket | null> {
+function sleep(ms: number) {
+  return new Promise(resolve => setTimeout(resolve, ms))
+}
+
+export async function recallTicket(
+  officeId: string,
+  ticketId: string,
+  counterNum: number
+): Promise<any> {
   const keys = officeKeys(officeId)
   const tickets = await getOfficeTickets(officeId)
-  const ticket = tickets.find((t) => t.id === ticketId)
-  if (!ticket || ticket.status !== "called") return null
+  const ticket = tickets.find(t => (t.id === ticketId && t.counter === counterNum))
+  if (!ticket || ticket.status!=="called") return null
 
-  // Re-trigger call (just update calledAt for UI purposes)
   ticket.calledAt = Date.now()
   await redis.set(keys.TICKETS, tickets)
   return ticket
@@ -388,6 +395,7 @@ export async function getAllOfficeStats() {
         name: office.name,
         abbreviation: office.abbreviation,
         prefix: office.prefix,
+        pin: office.pin,
         color: office.color,
         queueDepth: waiting.length,
         avgWaitMinutes: avgWait,
