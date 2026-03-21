@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next'
 import { Figtree, DM_Mono } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
+import { ThemeProvider } from '@/context/theme-context'
 import './globals.css'
 
 const figtree = Figtree({
@@ -33,7 +34,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${figtree.variable} ${dmMono.variable} font-sans antialiased`}>
-        {children}
+        <ThemeProvider>{children}</ThemeProvider>
         <Analytics />
       </body>
     </html>

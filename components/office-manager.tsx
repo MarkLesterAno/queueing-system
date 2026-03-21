@@ -57,45 +57,51 @@ export default function OfficeManager({
   };
 
   const validateForm = (): boolean => {
-    if (!formData.id.trim()) {
-      setError("Office ID is required");
-      return false;
+    const id = formData.id || ""
+    const name = formData.name || ""
+    const abbreviation = formData.abbreviation || ""
+    const prefix = formData.prefix || ""
+    const pin = formData.pin || ""
+
+    if (!id.trim()) {
+      setError("Office ID is required")
+      return false
     }
-    if (!formData.name.trim()) {
-      setError("Office name is required");
-      return false;
+    if (!name.trim()) {
+      setError("Office name is required")
+      return false
     }
-    if (!formData.abbreviation.trim()) {
-      setError("Abbreviation is required");
-      return false;
+    if (!abbreviation.trim()) {
+      setError("Abbreviation is required")
+      return false
     }
-    if (formData.abbreviation.length > 3) {
-      setError("Abbreviation must be 3 characters or less");
-      return false;
+    if (abbreviation.length > 3) {
+      setError("Abbreviation must be 3 characters or less")
+      return false
     }
-    if (!formData.prefix.trim()) {
-      setError("Prefix is required");
-      return false;
+    if (!prefix.trim()) {
+      setError("Prefix is required")
+      return false
     }
-    if (formData.prefix.length > 3) {
-      setError("Prefix must be 3 characters or less");
-      return false;
+    if (prefix.length > 3) {
+      setError("Prefix must be 3 characters or less")
+      return false
     }
-    if (!formData.pin.trim()) {
-      setError("PIN is required");
-      return false;
+    if (!pin.trim()) {
+      setError("PIN is required")
+      return false
     }
-    if (formData.pin.length < 4) {
-      setError("PIN must be at least 4 characters");
-      return false;
+    if (pin.length < 4) {
+      setError("PIN must be at least 4 characters")
+      return false
     }
     if (formData.counters < 1 || formData.counters > 6) {
       setError("Counters must be between 1 and 6");
       return false;
     }
-    if (isAddMode && offices.find((o: any) => o.id === formData.id)) {
-      setError("Office ID already exists");
-      return false;
+    if (isAddMode && offices.find((o: any) => o.id === id)) {
+      setError("Office ID already exists")
+      return false
     }
     setError("");
     return true;
@@ -418,7 +424,7 @@ export default function OfficeManager({
                     <input
                       type="text"
                       disabled={!isAddMode}
-                      value={formData.id}
+                      value={formData.id ?? ""}
                       onChange={(e) =>
                         setFormData({ ...formData, id: e.target.value })
                       }
@@ -435,7 +441,7 @@ export default function OfficeManager({
                     </label>
                     <input
                       type="text"
-                      value={formData.name}
+                      value={formData.name ?? ""}
                       onChange={(e) =>
                         setFormData({ ...formData, name: e.target.value })
                       }
@@ -453,7 +459,7 @@ export default function OfficeManager({
                       </label>
                       <input
                         type="text"
-                        value={formData.abbreviation}
+                        value={formData.abbreviation ?? ""}
                         onChange={(e) =>
                           setFormData({
                             ...formData,
@@ -472,7 +478,7 @@ export default function OfficeManager({
                       </label>
                       <input
                         type="text"
-                        value={formData.prefix}
+                        value={formData.prefix ?? ""}
                         onChange={(e) =>
                           setFormData({
                             ...formData,
@@ -495,7 +501,7 @@ export default function OfficeManager({
                       </label>
                       <input
                         type="text"
-                        value={formData.pin}
+                        value={formData.pin ?? ""}
                         onChange={(e) =>
                           setFormData({ ...formData, pin: e.target.value })
                         }
@@ -512,11 +518,11 @@ export default function OfficeManager({
                         type="number"
                         min="1"
                         max="6"
-                        value={formData.counters}
+                        value={formData.counters || 2}
                         onChange={(e) =>
                           setFormData({
                             ...formData,
-                            counters: Number(e.target.value),
+                            counters: Math.max(1, Math.min(6, Number(e.target.value) || 1)),
                           })
                         }
                         className="px-3 py-2 bg-secondary border border-border rounded-sm font-mono text-sm"
