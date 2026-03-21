@@ -47,6 +47,7 @@ export async function GET(
       abbreviation: office.abbreviation,
       color: office.color,
     },
+    
     counters,
     counterCount,
     currentlyServing: [...called, ...servingTickets],

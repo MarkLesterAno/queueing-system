@@ -1,59 +1,62 @@
-"use client"
+"use client";
 
-import { useEffect, useState, useCallback, useRef } from "react"
-import { motion, AnimatePresence } from "framer-motion"
-import TextToSpeech from "@/components/tts-narrator"
-import type { Office } from "@/lib/queue"
+import { useEffect, useState, useCallback, useRef } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import TextToSpeech from "@/components/tts-narrator";
+import type { Office, Ticket } from "@/lib/queue";
 
 interface DisplayData {
-  office: { id: string; name: string; abbreviation: string; color: string }
-  counters: Record<number, { ticketId: string | null; status: string }>
-  counterCount: number
-  nextUp: { id: string; position: number; estimatedWait: string }[]
-  waitingCount: number
-  totalServed: number
-  timestamp: number
+  office: { id: string; name: string; abbreviation: string; color: string };
+  counters: Record<number, { ticketId: string | null; status: string }>;
+  counterCount: number;
+  nextUp: { id: string; position: number; estimatedWait: string }[];
+  waitingCount: number;
+  currentlyServing: Ticket[];
+  totalServed: number;
+  timestamp: number;
 }
 
 function useSSE(officeId: string) {
-  const [data, setData] = useState<DisplayData | null>(null)
-  const retryRef = useRef(0)
+  const [data, setData] = useState<DisplayData | null>(null);
+  const retryRef = useRef(0);
 
   useEffect(() => {
-    let es: EventSource | null = null
-    let closed = false
+    let es: EventSource | null = null;
+    let closed = false;
 
     const connect = () => {
-      if (closed) return
-      es = new EventSource(`/api/queue/${officeId}/stream`)
+      if (closed) return;
+      es = new EventSource(`/api/queue/${officeId}/stream`);
 
       es.onmessage = (event) => {
         try {
-          const parsed = JSON.parse(event.data)
-          setData(parsed)
-          retryRef.current = 0
-        } catch { /* ignore parse errors */ }
-      }
+          const parsed = JSON.parse(event.data);
+          setData(parsed);
+          retryRef.current = 0;
+        } catch {
+          /* ignore parse errors */
+        }
+      };
 
       es.onerror = () => {
-        es?.close()
+        es?.close();
         if (!closed) {
-          const delay = Math.min(1000 * 2 ** retryRef.current, 10000)
-          retryRef.current++
-          setTimeout(connect, delay)
+          const delay = Math.min(1000 * 2 ** retryRef.current, 10000);
+          retryRef.current++;
+          setTimeout(connect, delay);
         }
-      }
-    }
+      };
+    };
 
-    connect()
+    connect();
 
     return () => {
-      closed = true
-      es?.close()
-    }
-  }, [officeId])
+      closed = true;
+      es?.close();
+    };
+  }, [officeId]);
 
-  return data
+  return data;
 }
 
 function CounterDisplay({
@@ -61,18 +64,15 @@ function CounterDisplay({
   ticketId,
   status,
   color,
-  recall
 }: {
-  counterNum: number
-  ticketId: string | null
-  status: string
-  color: string
-  recall: number
+  counterNum: number;
+  ticketId: string | null;
+  status: string;
+  color: string;
 }) {
   // Parse prefix and number from ticket id like "HR-001"
-  const prefix = ticketId ? ticketId.split("-")[0] : null
-  const num = ticketId ? ticketId.split("-")[1] : null
-  const tts = num ? num : ""
+  const prefix = ticketId ? ticketId.split("-")[0] : null;
+  const num = ticketId ? ticketId.split("-")[1] : "null";
 
   return (
     <div className="flex flex-col items-center gap-4 px-6 py-10 flex-1">
@@ -98,7 +98,11 @@ function CounterDisplay({
               </span>
               <span
                 className="font-mono font-medium tabular-nums"
-                style={{ fontSize: "clamp(4rem, 12vw, 9rem)", lineHeight: 1, color }}
+                style={{
+                  fontSize: "clamp(4rem, 12vw, 9rem)",
+                  lineHeight: 1,
+                  color,
+                }}
               >
                 {num}
               </span>
@@ -110,37 +114,38 @@ function CounterDisplay({
           )}
         </motion.div>
       </AnimatePresence>
-      <TextToSpeech text={tts} recall={recall} />
 
       <span
         className="font-mono text-[10px] uppercase tracking-widest"
-        style={{ color: status === "active" ? color : "var(--muted-foreground)" }}
+        style={{
+          color: status === "active" ? color : "var(--muted-foreground)",
+        }}
       >
         {status === "active" ? "Now Serving" : "Idle"}
       </span>
     </div>
-  )
+  );
 }
 
 export default function OfficeDisplayPage({
   params,
 }: {
-  params: Promise<{ office: string }>
+  params: Promise<{ office: string }>;
 }) {
-  const [officeId, setOfficeId] = useState<string>("")
-  const [office, setOffice] = useState<Office | null>(null)
-  const [loading, setLoading] = useState(true)
+  const [officeId, setOfficeId] = useState<string>("");
+  const [office, setOffice] = useState<Office | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     params.then(async (p) => {
-      setOfficeId(p.office)
+      setOfficeId(p.office);
       try {
-        const res = await fetch(`/api/queue/${p.office}`)
+        const res = await fetch(`/api/queue/${p.office}`);
         if (!res.ok) {
-          setLoading(false)
-          return
+          setLoading(false);
+          return;
         }
-        const data = await res.json()
+        const data = await res.json();
         setOffice({
           id: data.office.id,
           name: data.office.name,
@@ -149,16 +154,16 @@ export default function OfficeDisplayPage({
           color: data.office.color,
           counters: data.counterCount,
           pin: "ADMIN_PIN",
-        })
-        setLoading(false)
+        });
+        setLoading(false);
       } catch (err) {
-        console.error("Failed to fetch office:", err)
-        setLoading(false)
+        console.error("Failed to fetch office:", err);
+        setLoading(false);
       }
-    })
-  }, [params])
+    });
+  }, [params]);
 
-  const data = useSSE(officeId)
+  const data = useSSE(officeId);
 
   if (!officeId || loading) {
     return (
@@ -167,7 +172,7 @@ export default function OfficeDisplayPage({
           Loading...
         </span>
       </div>
-    )
+    );
   }
 
   if (!office) {
@@ -177,10 +182,8 @@ export default function OfficeDisplayPage({
           Office not found
         </span>
       </div>
-    )
+    );
   }
-
-  const color = office.color
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
@@ -189,7 +192,7 @@ export default function OfficeDisplayPage({
         <div className="flex items-center gap-3">
           <div
             className="h-2 w-2 rounded-full animate-pulse"
-            style={{ backgroundColor: color }}
+            style={{ backgroundColor: office.color }}
           />
           <span className="font-mono text-xs uppercase tracking-[0.2em] text-muted-foreground">
             {office.name}
@@ -211,20 +214,32 @@ export default function OfficeDisplayPage({
           <div className="flex flex-col md:flex-row items-stretch justify-center divide-y md:divide-y-0 md:divide-x divide-border w-full max-w-6xl">
             {Array.from({ length: data.counterCount }, (_, i) => i + 1).map(
               (num) => (
-                <CounterDisplay
-                  key={num}
-                  counterNum={num}
-                  ticketId={data.counters[num]?.ticketId ?? null}
-                  status={data.counters[num]?.status ?? "idle"}
-                  color={color}
-                  recall={data.timestamp}
-                />
-              )
+                <>
+                  <CounterDisplay
+                    key={num}
+                    counterNum={num}
+                    ticketId={data.counters[num]?.ticketId ?? null}
+                    status={data.counters[num]?.status ?? "idle"}
+                    color={office.color}
+                  />
+                  <TextToSpeech
+                    key={data.counters[num]?.ticketId}
+                    text={data.counters[num]?.ticketId || ""}
+                    recall={
+                      data.currentlyServing.find((t) => t.counter === num)
+                        ?.calledAt || 0
+                    }
+                  />
+                </>
+              ),
             )}
           </div>
         ) : (
           <div className="flex flex-col items-center gap-4">
-            <div className="h-1 w-16 animate-pulse" style={{ backgroundColor: color }} />
+            <div
+              className="h-1 w-16 animate-pulse"
+              style={{ backgroundColor: office.color }}
+            />
             <span className="font-mono text-xs text-muted-foreground uppercase tracking-widest">
               Connecting
             </span>
@@ -273,9 +288,12 @@ export default function OfficeDisplayPage({
           QueueFlow -- {office.abbreviation} Display
         </span>
         <span className="font-mono text-[10px] text-muted-foreground tabular-nums">
-          {new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+          {new Date().toLocaleTimeString([], {
+            hour: "2-digit",
+            minute: "2-digit",
+          })}
         </span>
       </footer>
     </div>
-  )
+  );
 }
