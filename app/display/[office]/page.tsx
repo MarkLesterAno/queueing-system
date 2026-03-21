@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback, useRef } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import TextToSpeech from "@/components/tts-narrator"
+import RecallTTS from "@/components/recall-tts"
 import type { Office } from "@/lib/queue"
 
 interface DisplayData {
@@ -110,6 +111,7 @@ function CounterDisplay({
         </motion.div>
       </AnimatePresence>
       <TextToSpeech text={ttsText} isActive={isActive} />
+      <RecallTTS ticketId={ticketId} status={status} />
 
       <span
         className="font-mono text-[10px] uppercase tracking-widest"
