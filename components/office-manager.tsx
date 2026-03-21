@@ -1,24 +1,10 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { addOffice, updateOffice, deleteOffice } from "@/lib/actions"
-import { X } from "lucide-react"
-import { motion, AnimatePresence } from "framer-motion"
-
-interface OfficeFormData {
-  id: string
-  name: string
-  abbreviation: string
-  prefix: string
-  color: string
-  counters: number
-  pin: string
-}
-
-interface OfficeManagerProps {
-  offices: any[]
-  onMutate: () => void
-}
+import { useState } from "react";
+import { addOffice, updateOffice, deleteOffice, setOfficeCounters, resetOfficeQueue } from "@/lib/actions";
+import { X } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import Link from "next/link";
 
 const DEFAULT_COLORS = [
   "#5B8C6A",
@@ -29,15 +15,18 @@ const DEFAULT_COLORS = [
   "#9E8B6B",
   "#6B8B9E",
   "#8B6B6B",
-]
+];
 
-export default function OfficeManager({ offices, onMutate }: OfficeManagerProps) {
-  const [isModalOpen, setIsModalOpen] = useState(false)
-  const [isAddMode, setIsAddMode] = useState(false)
-  const [editingId, setEditingId] = useState<string | null>(null)
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string>("")
-  const [formData, setFormData] = useState<OfficeFormData>({
+export default function OfficeManager({
+  offices,
+  onMutate,
+}: IOfficeManagerProps) {
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isAddMode, setIsAddMode] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string>("");
+  const [formData, setFormData] = useState<IOfficeFormData>({
     id: "",
     name: "",
     abbreviation: "",
@@ -45,7 +34,7 @@ export default function OfficeManager({ offices, onMutate }: OfficeManagerProps)
     color: DEFAULT_COLORS[0],
     counters: 2,
     pin: "1234",
-  })
+  });
 
   const resetForm = () => {
     setFormData({
@@ -56,67 +45,67 @@ export default function OfficeManager({ offices, onMutate }: OfficeManagerProps)
       color: DEFAULT_COLORS[0],
       counters: 2,
       pin: "1234",
-    })
-    setEditingId(null)
-    setIsAddMode(false)
-    setError("")
-  }
+    });
+    setEditingId(null);
+    setIsAddMode(false);
+    setError("");
+  };
 
   const closeModal = () => {
-    resetForm()
-    setIsModalOpen(false)
-  }
+    resetForm();
+    setIsModalOpen(false);
+  };
 
   const validateForm = (): boolean => {
     if (!formData.id.trim()) {
-      setError("Office ID is required")
-      return false
+      setError("Office ID is required");
+      return false;
     }
     if (!formData.name.trim()) {
-      setError("Office name is required")
-      return false
+      setError("Office name is required");
+      return false;
     }
     if (!formData.abbreviation.trim()) {
-      setError("Abbreviation is required")
-      return false
+      setError("Abbreviation is required");
+      return false;
     }
     if (formData.abbreviation.length > 3) {
-      setError("Abbreviation must be 3 characters or less")
-      return false
+      setError("Abbreviation must be 3 characters or less");
+      return false;
     }
     if (!formData.prefix.trim()) {
-      setError("Prefix is required")
-      return false
+      setError("Prefix is required");
+      return false;
     }
     if (formData.prefix.length > 3) {
-      setError("Prefix must be 3 characters or less")
-      return false
+      setError("Prefix must be 3 characters or less");
+      return false;
     }
     if (!formData.pin.trim()) {
-      setError("PIN is required")
-      return false
+      setError("PIN is required");
+      return false;
     }
     if (formData.pin.length < 4) {
-      setError("PIN must be at least 4 characters")
-      return false
+      setError("PIN must be at least 4 characters");
+      return false;
     }
     if (formData.counters < 1 || formData.counters > 6) {
-      setError("Counters must be between 1 and 6")
-      return false
+      setError("Counters must be between 1 and 6");
+      return false;
     }
     if (isAddMode && offices.find((o: any) => o.id === formData.id)) {
-      setError("Office ID already exists")
-      return false
+      setError("Office ID already exists");
+      return false;
     }
-    setError("")
-    return true
-  }
+    setError("");
+    return true;
+  };
 
   const startAdd = () => {
-    resetForm()
-    setIsAddMode(true)
-    setIsModalOpen(true)
-  }
+    resetForm();
+    setIsAddMode(true);
+    setIsModalOpen(true);
+  };
 
   const startEdit = (office: any) => {
     setFormData({
@@ -125,20 +114,20 @@ export default function OfficeManager({ offices, onMutate }: OfficeManagerProps)
       abbreviation: office.abbreviation,
       prefix: office.prefix,
       color: office.color,
-      counters: office.counters,
+      counters: office.totalCounters,
       pin: office.pin || "1234",
-    })
-    setEditingId(office.id)
-    setIsAddMode(false)
-    setIsModalOpen(true)
-  }
+    });
+    setEditingId(office.id);
+    setIsAddMode(false);
+    setIsModalOpen(true);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+    e.preventDefault();
 
-    if (!validateForm()) return
+    if (!validateForm()) return;
 
-    setLoading(true)
+    setLoading(true);
 
     try {
       if (isAddMode) {
@@ -149,13 +138,13 @@ export default function OfficeManager({ offices, onMutate }: OfficeManagerProps)
           formData.prefix.trim().toUpperCase(),
           formData.color,
           formData.counters,
-          formData.pin.trim()
-        )
+          formData.pin.trim(),
+        );
         if (success) {
-          closeModal()
-          onMutate()
+          closeModal();
+          onMutate();
         } else {
-          setError("Failed to add office. Office ID may already exist.")
+          setError("Failed to add office. Office ID may already exist.");
         }
       } else if (editingId) {
         const success = await updateOffice(editingId, {
@@ -165,40 +154,209 @@ export default function OfficeManager({ offices, onMutate }: OfficeManagerProps)
           color: formData.color,
           counters: formData.counters,
           pin: formData.pin.trim(),
-        })
+        });
         if (success) {
-          closeModal()
-          onMutate()
+          closeModal();
+          onMutate();
         } else {
-          setError("Failed to update office.")
+          setError("Failed to update office.");
         }
       }
     } catch (err) {
-      setError("An error occurred. Please try again.")
-      console.error("[v0] Office operation error:", err)
+      setError("An error occurred. Please try again.");
+      console.error("[v0] Office operation error:", err);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const handleDelete = async (id: string) => {
-    if (!confirm(`Delete office ${id}? This will clear all queue data.`)) return
-    setLoading(true)
+    if (!confirm(`Delete office ${id}? This will clear all queue data.`))
+      return;
+    setLoading(true);
     try {
-      const success = await deleteOffice(id)
+      const success = await deleteOffice(id);
       if (success) {
-        closeModal()
-        onMutate()
+        closeModal();
+        onMutate();
       }
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
+  };
+
+  interface OfficeStat {
+    id: string;
+    name: string;
+    abbreviation: string;
+    color: string;
+    queueDepth: number;
+    avgWaitMinutes: number;
+    ticketsServed: number;
+    activeTickets: number;
+    totalCounters: number;
+    idleCounters: number;
+    tickets: Array<{
+      id: string;
+      seq: number;
+      officeId: string;
+      status: string;
+      counter: number | null;
+      createdAt: number;
+      calledAt: number | null;
+      servedAt: number | null;
+      doneAt: number | null;
+    }>;
+  }
+
+  function StatCard({
+    label,
+    value,
+    color,
+  }: {
+    label: string;
+    value: string | number;
+    color?: string;
+  }) {
+    return (
+      <div className="flex flex-col gap-1">
+        <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+          {label}
+        </span>
+        <span
+          className="font-mono text-lg tabular-nums"
+          style={{ color: color || "var(--foreground)" }}
+        >
+          {value}
+        </span>
+      </div>
+    );
+  }
+
+  function OfficeRow({
+    stat,
+    onMutate,
+  }: {
+    stat: OfficeStat;
+    onMutate: () => void;
+  }) {
+    const [adjusting, setAdjusting] = useState(false);
+
+    const handleAdjustCounters = async (delta: number) => {
+      const newCount = Math.max(1, Math.min(6, stat.totalCounters + delta));
+      if (newCount === stat.totalCounters) return;
+      setAdjusting(true);
+      await setOfficeCounters(stat.id, newCount);
+      onMutate();
+      setAdjusting(false);
+    };
+
+    const handleReset = async () => {
+      if (!confirm(`Reset ${stat.name} queue? All tickets will be cleared.`))
+        return;
+      await resetOfficeQueue(stat.id);
+      onMutate();
+    };
+
+    return (
+      <div className="flex flex-col border border-border rounded-sm overflow-hidden">
+        {/* Office header */}
+        <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-secondary">
+          <div className="flex items-center gap-3">
+            <div
+              className="h-2 w-2 rounded-full"
+              style={{ backgroundColor: stat.color }}
+            />
+            <span className="font-mono text-xs uppercase tracking-widest text-foreground">
+              {stat.abbreviation}
+            </span>
+            <span className="font-sans text-xs text-muted-foreground">
+              {stat.name}
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+            onClick={() => startEdit(stat)}
+              className="px-2 py-1 rounded-sm border border-border font-mono text-[10px] uppercase tracking-widest text-muted-foreground hover:text-foreground hover:border-foreground/30 transition-colors"
+            >
+              Edit
+            </button>
+            <Link
+              href={`/operator/${stat.id}`}
+              className="px-2 py-1 rounded-sm border border-border font-mono text-[10px] uppercase tracking-widest text-muted-foreground hover:text-foreground hover:border-foreground/30 transition-colors"
+            >
+              Operator
+            </Link>
+            <Link
+              href={`/display/${stat.id}`}
+              className="px-2 py-1 rounded-sm border border-border font-mono text-[10px] uppercase tracking-widest text-muted-foreground hover:text-foreground hover:border-foreground/30 transition-colors"
+            >
+              Display
+            </Link>
+          </div>
+        </div>
+
+        {/* Stats row */}
+        <div className="flex items-center gap-8 px-4 py-4 flex-wrap">
+          <StatCard
+            label="Queue Depth"
+            value={stat.queueDepth}
+            color={stat.color}
+          />
+          <StatCard label="Avg Wait" value={`${stat.avgWaitMinutes}m`} />
+          <StatCard label="Served Today" value={stat.ticketsServed} />
+          <StatCard
+            label="Active"
+            value={stat.activeTickets}
+            color={stat.activeTickets > 0 ? stat.color : undefined}
+          />
+
+          {/* Counter management */}
+          <div className="flex flex-col gap-1">
+            <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+              Counters
+            </span>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => handleAdjustCounters(-1)}
+                disabled={adjusting || stat.totalCounters <= 1}
+                className="flex items-center justify-center h-7 w-7 rounded-sm bg-secondary text-muted-foreground font-mono text-sm hover:bg-border transition-colors disabled:opacity-30"
+              >
+                -
+              </button>
+              <span className="font-mono text-lg tabular-nums text-foreground w-6 text-center">
+                {stat.totalCounters}
+              </span>
+              <button
+                onClick={() => handleAdjustCounters(1)}
+                disabled={adjusting || stat.totalCounters >= 6}
+                className="flex items-center justify-center h-7 w-7 rounded-sm bg-secondary text-muted-foreground font-mono text-sm hover:bg-border transition-colors disabled:opacity-30"
+              >
+                +
+              </button>
+              <span className="font-mono text-[10px] text-muted-foreground ml-1">
+                ({stat.idleCounters} idle)
+              </span>
+            </div>
+          </div>
+
+          <div className="ml-auto">
+            <button
+              onClick={handleReset}
+              className="px-3 py-1.5 rounded-sm border border-border text-muted-foreground font-mono text-[10px] uppercase tracking-widest hover:border-destructive hover:text-destructive transition-colors"
+            >
+              Reset
+            </button>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (
     <>
       {/* Offices List Header */}
-      <div className="border border-border rounded-sm overflow-hidden">
+      <div className="rounded-sm overflow-hidden">
         <div className="flex items-center justify-between px-4 py-3 bg-secondary">
           <span className="font-mono text-xs uppercase tracking-widest text-foreground">
             Offices ({offices.length})
@@ -212,42 +370,10 @@ export default function OfficeManager({ offices, onMutate }: OfficeManagerProps)
         </div>
 
         {/* Offices Grid */}
-        <div className="p-4 bg-secondary/50 grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div className="py-4 grid grid-cols-1 md:grid-cols-2 gap-3">
           {offices && offices.length > 0 ? (
             offices.map((office) => (
-              <div
-                key={office.id}
-                className="flex flex-col gap-2 p-3 bg-background border border-border rounded-sm hover:border-accent transition-colors"
-              >
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center gap-2">
-                    <div
-                      className="h-3 w-3 rounded-full"
-                      style={{ backgroundColor: office.color }}
-                    />
-                    <div>
-                      <span className="font-mono text-sm text-foreground block">
-                        {office.abbreviation}
-                      </span>
-                      <span className="font-mono text-[10px] text-muted-foreground">
-                        {office.name}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between text-[10px]">
-                  <span className="font-mono text-muted-foreground">
-                    {office.counters} counters
-                  </span>
-                  <button
-                    onClick={() => startEdit(office)}
-                    className="px-2 py-1 bg-secondary border border-border rounded-sm font-mono text-[10px] uppercase tracking-widest text-muted-foreground hover:bg-border transition-colors"
-                  >
-                    Edit
-                  </button>
-                </div>
-              </div>
+              <OfficeRow key={office.id} stat={office} onMutate={onMutate}/>
             ))
           ) : (
             <div className="col-span-full text-center py-6">
@@ -295,7 +421,10 @@ export default function OfficeManager({ offices, onMutate }: OfficeManagerProps)
                 </div>
 
                 {/* Modal Body */}
-                <form onSubmit={handleSubmit} className="p-6 flex flex-col gap-4">
+                <form
+                  onSubmit={handleSubmit}
+                  className="p-6 flex flex-col gap-4"
+                >
                   {/* Error Message */}
                   {error && (
                     <div className="px-3 py-2 bg-destructive/10 border border-destructive rounded-sm">
@@ -470,5 +599,5 @@ export default function OfficeManager({ offices, onMutate }: OfficeManagerProps)
         )}
       </AnimatePresence>
     </>
-  )
+  );
 }
