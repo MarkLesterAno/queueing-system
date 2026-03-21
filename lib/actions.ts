@@ -388,6 +388,7 @@ export async function getAllOfficeStats() {
         name: office.name,
         abbreviation: office.abbreviation,
         prefix: office.prefix,
+        pin: office.pin,
         color: office.color,
         queueDepth: waiting.length,
         avgWaitMinutes: avgWait,

@@ -115,7 +115,7 @@ export default function OfficeManager({
       prefix: office.prefix,
       color: office.color,
       counters: office.totalCounters,
-      pin: office.pin || "1234",
+      pin: office.pin,
     });
     setEditingId(office.id);
     setIsAddMode(false);
@@ -185,30 +185,6 @@ export default function OfficeManager({
     }
   };
 
-  interface OfficeStat {
-    id: string;
-    name: string;
-    abbreviation: string;
-    color: string;
-    queueDepth: number;
-    avgWaitMinutes: number;
-    ticketsServed: number;
-    activeTickets: number;
-    totalCounters: number;
-    idleCounters: number;
-    tickets: Array<{
-      id: string;
-      seq: number;
-      officeId: string;
-      status: string;
-      counter: number | null;
-      createdAt: number;
-      calledAt: number | null;
-      servedAt: number | null;
-      doneAt: number | null;
-    }>;
-  }
-
   function StatCard({
     label,
     value,
@@ -237,7 +213,7 @@ export default function OfficeManager({
     stat,
     onMutate,
   }: {
-    stat: OfficeStat;
+    stat: IOfficeStat;
     onMutate: () => void;
   }) {
     const [adjusting, setAdjusting] = useState(false);
