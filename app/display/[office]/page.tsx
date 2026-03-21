@@ -61,18 +61,16 @@ function CounterDisplay({
   ticketId,
   status,
   color,
-  recall
 }: {
   counterNum: number
   ticketId: string | null
   status: string
   color: string
-  recall: number
 }) {
   // Parse prefix and number from ticket id like "HR-001"
   const prefix = ticketId ? ticketId.split("-")[0] : null
   const num = ticketId ? ticketId.split("-")[1] : null
-  const tts = num ? num : ""
+  const ttsText = num ? num : ""
 
   return (
     <div className="flex flex-col items-center gap-4 px-6 py-10 flex-1">
@@ -110,7 +108,7 @@ function CounterDisplay({
           )}
         </motion.div>
       </AnimatePresence>
-      <TextToSpeech text={tts} recall={recall} />
+      <TextToSpeech text={ttsText} />
 
       <span
         className="font-mono text-[10px] uppercase tracking-widest"
@@ -217,7 +215,6 @@ export default function OfficeDisplayPage({
                   ticketId={data.counters[num]?.ticketId ?? null}
                   status={data.counters[num]?.status ?? "idle"}
                   color={color}
-                  recall={data.timestamp}
                 />
               )
             )}
