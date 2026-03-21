@@ -1,4 +1,4 @@
-export type TicketStatus = "waiting" | "called" | "serving" | "done" | "skipped" | "hold"
+export type TicketStatus = "waiting" | "called"| "recall" | "serving" | "done" | "skipped" | "hold"
 
 export interface Office {
   id: string

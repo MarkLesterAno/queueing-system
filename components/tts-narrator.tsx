@@ -3,43 +3,39 @@
 import { useEffect, useRef } from "react";
 
 type TextToSpeechProps = {
+  recall: number;
   text: string;
-  isActive: boolean;
   rate?: number;
   pitch?: number;
   volume?: number;
 };
 
 export default function TextToSpeech({
+  recall,
   text,
-  isActive,
   rate = 1,
   pitch = 1,
   volume = 1,
 }: TextToSpeechProps) {
+  text = text ? text.split("-")[1] : "";
+
+  const prevRecallRef = useRef<number | null>(null);
   const prevTextRef = useRef<string | null>(null);
-  const prevActiveRef = useRef<boolean>(false);
-  const isFirstRenderRef = useRef(true);
+  const isFirstRender = useRef(true);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
     if (!text) return;
-    
-    // Skip on first render
-    if (isFirstRenderRef.current) {
-      isFirstRenderRef.current = false;
-      prevTextRef.current = text;
-      prevActiveRef.current = isActive;
+
+    // ✅ Skip first render
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
       return;
     }
+    
+    if (prevTextRef.current === text) return;
 
-    // Speak if:
-    // 1. Ticket number changed (new ticket called)
-    // 2. OR same ticket became active again (recall)
-    const textChanged = prevTextRef.current !== text;
-    const becameActive = !prevActiveRef.current && isActive;
-
-    if (!textChanged && !becameActive) return;
+    if (prevRecallRef.current === recall) return;
 
     window.speechSynthesis.cancel();
 
@@ -50,9 +46,14 @@ export default function TextToSpeech({
 
     window.speechSynthesis.speak(utterance);
 
-    prevTextRef.current = text;
-    prevActiveRef.current = isActive;
-  }, [text, isActive, rate, pitch, volume]);
+    prevRecallRef.current = recall;
+  }, [
+    recall, // ✅ always present
+    text,
+    rate,
+    pitch,
+    volume,
+  ]);
 
-  return null; // headless component
+  return null;
 }

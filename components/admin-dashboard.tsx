@@ -20,6 +20,7 @@ import { ChevronDown } from "lucide-react"
 const STATUS_STYLES: Record<TicketStatus, string> = {
   waiting: "bg-secondary text-muted-foreground",
   called: "bg-primary/20 text-primary",
+  recall: "bg-primary/20 text-primary",
   serving: "bg-primary text-primary-foreground",
   done: "bg-secondary/50 text-muted-foreground/50",
   skipped: "bg-destructive/20 text-destructive",
@@ -176,7 +177,7 @@ function CounterPanel({
           >
             {loading === "call" ? "Calling..." : "Call Next"}
           </button>
-        ) : currentTicket.status === "called" ? (
+        ) : currentTicket.status === "called" || currentTicket.status === "recall" ? (
           <div className="flex gap-1">
             <button
               onClick={() => wrap("serve", () => serveTicket(officeId, currentTicket.id))}
@@ -187,7 +188,7 @@ function CounterPanel({
               {loading === "serve" ? "..." : "Serve"}
             </button>
             <button
-              onClick={() => wrap("recall", () => recallTicket(officeId, currentTicket.id))}
+              onClick={() => wrap("recall", () => recallTicket(officeId, currentTicket.id, counterNum))}
               disabled={!!loading}
               className="flex items-center justify-center px-4 py-3 bg-secondary text-muted-foreground rounded-sm font-mono text-xs uppercase tracking-widest hover:bg-border transition-colors disabled:opacity-50"
             >
