@@ -40,6 +40,7 @@ export async function GET(
 
           const waiting = tickets.filter((t) => t.status === "waiting")
           const called = tickets.filter((t) => t.status === "called")
+          const recall = tickets.filter((t) => t.status === "recall")
           const servingTickets = tickets.filter((t) => t.status === "serving")
           const done = tickets.filter((t) => t.status === "done")
 
@@ -61,7 +62,7 @@ export async function GET(
             office: { id: office.id, name: office.name, abbreviation: office.abbreviation, color: office.color },
             counters,
             counterCount,
-            currentlyServing: [...called, ...servingTickets],
+            currentlyServing: [...called, ...recall, ...servingTickets],
             nextUp,
             waitingCount: waiting.length,
             totalServed: done.length,
