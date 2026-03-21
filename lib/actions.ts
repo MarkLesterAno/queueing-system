@@ -19,7 +19,7 @@ export async function getOfficeTickets(officeId: string): Promise<Ticket[]> {
 }
 
 export async function getOfficeServing(officeId: string): Promise<Record<number, string | null>> {
-  const office = getOffice(officeId)
+  const office = await getStoredOfficeById(officeId)
   if (!office) return {}
   const keys = officeKeys(officeId)
   const serving = await redis.get<Record<number, string | null>>(keys.SERVING)
@@ -34,14 +34,14 @@ export async function getOfficeCounterCount(officeId: string): Promise<number> {
   const keys = officeKeys(officeId)
   const count = await redis.get<number>(keys.COUNTERS)
   if (count) return count
-  const office = getOffice(officeId)
+  const office = await getStoredOfficeById(officeId)
   return office?.counters || 1
 }
 
 // ── Ticket issuance ───────────────────────────────────────────────
 
 export async function issueTicket(officeId: string): Promise<Ticket | null> {
-  const office = getOffice(officeId)
+  const office = await getStoredOfficeById(officeId)
   if (!office) return null
 
   const keys = officeKeys(officeId)
@@ -184,7 +184,7 @@ export async function holdTicket(officeId: string, ticketId: string): Promise<Ti
 // ── Queue reset ───────────────────────────────────────────────────
 
 export async function resetOfficeQueue(officeId: string): Promise<void> {
-  const office = getOffice(officeId)
+  const office = await getStoredOfficeById(officeId)
   if (!office) return
   const keys = officeKeys(officeId)
   const counterCount = await getOfficeCounterCount(officeId)
@@ -384,9 +384,10 @@ export async function getAllOfficeStats() {
       const idleCounters = Object.values(serving).filter((v) => v === null).length
 
       return {
-        officeId: office.id,
+        id: office.id,
         name: office.name,
         abbreviation: office.abbreviation,
+        prefix: office.prefix,
         color: office.color,
         queueDepth: waiting.length,
         avgWaitMinutes: avgWait,

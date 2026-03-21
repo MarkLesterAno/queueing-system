@@ -61,11 +61,13 @@ function CounterDisplay({
   ticketId,
   status,
   color,
+  recall
 }: {
   counterNum: number
   ticketId: string | null
   status: string
   color: string
+  recall: number
 }) {
   // Parse prefix and number from ticket id like "HR-001"
   const prefix = ticketId ? ticketId.split("-")[0] : null
@@ -108,7 +110,7 @@ function CounterDisplay({
           )}
         </motion.div>
       </AnimatePresence>
-      <TextToSpeech text={tts} />
+      <TextToSpeech text={tts} recall={recall} />
 
       <span
         className="font-mono text-[10px] uppercase tracking-widest"
@@ -150,7 +152,7 @@ export default function OfficeDisplayPage({
         })
         setLoading(false)
       } catch (err) {
-        console.error("[v0] Failed to fetch office:", err)
+        console.error("Failed to fetch office:", err)
         setLoading(false)
       }
     })
@@ -215,8 +217,8 @@ export default function OfficeDisplayPage({
                   ticketId={data.counters[num]?.ticketId ?? null}
                   status={data.counters[num]?.status ?? "idle"}
                   color={color}
+                  recall={data.timestamp}
                 />
-
               )
             )}
           </div>
