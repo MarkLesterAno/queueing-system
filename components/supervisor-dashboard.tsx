@@ -1,12 +1,11 @@
 "use client"
 
 import { useAllOffices } from "@/hooks/use-queue"
-import { setOfficeCounters, resetOfficeQueue } from "@/lib/actions"
-import { officeKeys, OFFICES } from "@/lib/queue"
 import { motion } from "framer-motion"
-import { useState, useCallback } from "react"
 import Link from "next/link"
 import OfficeManager from "./office-manager"
+import { StatCard } from "./stat-card"
+import { OfficeRow } from "./office-row"
 
 interface OfficeStat {
   id: string
@@ -32,59 +31,36 @@ interface OfficeStat {
   }>
 }
 
-function StatCard({
-  label,
-  value,
-  color,
-}: {
-  label: string
-  value: string | number
-  color?: string
-}) {
-  return (
-    <div className="flex flex-col gap-1">
-      <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
-        {label}
-      </span>
-      <span
-        className="font-mono text-lg tabular-nums"
-        style={{ color: color || "var(--foreground)" }}
-      >
-        {value}
-      </span>
-    </div>
-  )
-}
-
-function exportCSV(offices: OfficeStat[]) {
-  const rows = [
-    ["Office", "Ticket ID", "Status", "Counter", "Created", "Called", "Served", "Done"].join(","),
-  ]
+function exportToCSV(offices: OfficeStat[]) {
+  const headers = ["Office", "Ticket ID", "Status", "Counter", "Created", "Called", "Served", "Done"]
+  const rows = [headers.join(",")]
 
   for (const stat of offices) {
     for (const ticket of stat.tickets) {
-      rows.push(
-        [
-          stat.name,
-          ticket.id,
-          ticket.status,
-          ticket.counter ?? "",
-          ticket.createdAt ? new Date(ticket.createdAt).toISOString() : "",
-          ticket.calledAt ? new Date(ticket.calledAt).toISOString() : "",
-          ticket.servedAt ? new Date(ticket.servedAt).toISOString() : "",
-          ticket.doneAt ? new Date(ticket.doneAt).toISOString() : "",
-        ].join(",")
-      )
+      rows.push([
+        stat.name,
+        ticket.id,
+        ticket.status,
+        ticket.counter ?? "",
+        formatTimestamp(ticket.createdAt),
+        formatTimestamp(ticket.calledAt),
+        formatTimestamp(ticket.servedAt),
+        formatTimestamp(ticket.doneAt),
+      ].join(","))
     }
   }
 
   const blob = new Blob([rows.join("\n")], { type: "text/csv" })
   const url = URL.createObjectURL(blob)
-  const a = document.createElement("a")
-  a.href = url
-  a.download = `queue-report-${new Date().toISOString().split("T")[0]}.csv`
-  a.click()
+  const link = document.createElement("a")
+  link.href = url
+  link.download = `queue-report-${new Date().toISOString().split("T")[0]}.csv`
+  link.click()
   URL.revokeObjectURL(url)
+}
+
+function formatTimestamp(ts: number | null): string {
+  return ts ? new Date(ts).toISOString() : ""
 }
 
 export default function SupervisorDashboard() {
@@ -123,7 +99,7 @@ export default function SupervisorDashboard() {
             {offices.length} offices
           </span>
           <button
-            onClick={() => exportCSV(offices)}
+            onClick={() => exportToCSV(offices)}
             className="px-3 py-1.5 rounded-sm border border-border text-muted-foreground font-mono text-[10px] uppercase tracking-widest hover:text-foreground hover:border-foreground/30 transition-colors"
           >
             Export CSV
