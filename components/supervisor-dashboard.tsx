@@ -8,7 +8,7 @@ import { StatCard } from "./stat-card"
 import { OfficeRow } from "./office-row"
 
 interface OfficeStat {
-  officeId: string
+  id: string
   name: string
   abbreviation: string
   color: string
@@ -121,24 +121,12 @@ export default function SupervisorDashboard() {
 
       {/* Office rows */}
       <main className="flex-1 p-6">
-        <div className="max-w-5xl mx-auto flex flex-col gap-4">
+        <div className="max-w-6xl mx-auto flex flex-col gap-4">
           {/* Office Manager Section */}
           <OfficeManager 
-            offices={offices.map((o) => ({
-              id: o.officeId,
-              name: o.name,
-              abbreviation: o.abbreviation,
-              prefix: o.abbreviation,
-              color: o.color,
-              counters: o.totalCounters,
-            }))}
+            offices={offices}
             onMutate={() => mutate()} 
           />
-
-          {/* Office Rows */}
-          {offices.map((stat) => (
-            <OfficeRow key={stat.officeId} stat={stat} onMutate={() => mutate()} />
-          ))}
         </div>
       </main>
 
