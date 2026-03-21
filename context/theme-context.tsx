@@ -77,16 +77,12 @@ function applyThemeToDOM(theme: ThemeSettings) {
   root.style.setProperty("--destructive", theme.destructive)
   root.style.setProperty("--border", theme.border)
   root.style.setProperty("--ring", theme.ring)
-  root.style.setProperty("--muted", theme.muted)
-  root.style.setProperty("--muted-foreground", theme.mutedForeground)
 
   // Apply font sizes
   root.style.setProperty("--base-font-size", `${theme.baseFontSize}rem`)
   root.style.setProperty("--heading-font-size", `${theme.headingFontSize}rem`)
   root.style.setProperty("--mono-font-size", `${theme.monoFontSize}rem`)
 
-  // Apply layout
+  // Apply radius
   root.style.setProperty("--radius", `${theme.radius}rem`)
-  root.style.setProperty("--spacing", `${theme.spacing}rem`)
-  root.style.setProperty("--opacity", theme.opacity.toString())
 }

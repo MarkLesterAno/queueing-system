@@ -6,7 +6,6 @@ import Link from "next/link"
 import OfficeManager from "./office-manager"
 import { StatCard } from "./stat-card"
 import { OfficeRow } from "./office-row"
-import { SettingsButton } from "./settings-modal"
 
 interface OfficeStat {
   id: string
@@ -95,7 +94,7 @@ export default function SupervisorDashboard() {
             Supervisor Dashboard
           </span>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-4">
           <span className="font-mono text-xs text-muted-foreground tabular-nums">
             {offices.length} offices
           </span>
@@ -105,7 +104,6 @@ export default function SupervisorDashboard() {
           >
             Export CSV
           </button>
-          <SettingsButton />
         </div>
       </header>
 
