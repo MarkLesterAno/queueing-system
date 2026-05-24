@@ -13,32 +13,31 @@ interface ThemeContextType {
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined)
 
-export function ThemeProvider({ children }: { children: React.ReactNode }) {
+export function ThemeProvider({ children, orgId }: { children: React.ReactNode; orgId?: string }) {
   const [settings, setSettings] = useState<ThemeSettings>(DEFAULT_THEME_SETTINGS)
   const [isLoading, setIsLoading] = useState(true)
 
-  // Load settings on mount
   useEffect(() => {
     async function loadSettings() {
-      const loaded = await getThemeSettings()
+      const loaded = await getThemeSettings(orgId)
       setSettings(loaded)
       applyThemeToDOM(loaded)
       setIsLoading(false)
     }
     loadSettings()
-  }, [])
+  }, [orgId])
 
   const updateSettings = async (partial: Partial<ThemeSettings>) => {
     const updated = { ...settings, ...partial }
     setSettings(updated)
     applyThemeToDOM(updated)
-    await saveThemeSettings(updated)
+    await saveThemeSettings(updated, orgId)
   }
 
   const resetSettings = async () => {
     setSettings(DEFAULT_THEME_SETTINGS)
     applyThemeToDOM(DEFAULT_THEME_SETTINGS)
-    await saveThemeSettings(DEFAULT_THEME_SETTINGS)
+    await saveThemeSettings(DEFAULT_THEME_SETTINGS, orgId)
   }
 
   const applySettings = () => {
@@ -62,8 +61,7 @@ export function useTheme() {
 
 function applyThemeToDOM(theme: ThemeSettings) {
   const root = document.documentElement
-  
-  // Apply colors
+
   root.style.setProperty("--background", theme.background)
   root.style.setProperty("--foreground", theme.foreground)
   root.style.setProperty("--card", theme.card)
@@ -78,11 +76,9 @@ function applyThemeToDOM(theme: ThemeSettings) {
   root.style.setProperty("--border", theme.border)
   root.style.setProperty("--ring", theme.ring)
 
-  // Apply font sizes
   root.style.setProperty("--base-font-size", `${theme.baseFontSize}rem`)
   root.style.setProperty("--heading-font-size", `${theme.headingFontSize}rem`)
   root.style.setProperty("--mono-font-size", `${theme.monoFontSize}rem`)
 
-  // Apply radius
   root.style.setProperty("--radius", `${theme.radius}rem`)
 }

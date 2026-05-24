@@ -4,11 +4,141 @@ import { redis } from "@/lib/redis"
 import {
   officeKeys,
   formatTicketId,
-  getOffice,
-  OFFICES,
+  SEED_OFFICES,
   type Ticket,
-  type TicketStatus,
 } from "@/lib/queue"
+import { createClient, createServiceClient } from "@/lib/supabase/server"
+import type { Office } from "@/lib/queue"
+
+// ── Public office helpers (uses service client — works in API routes) ──
+
+async function getStoredOfficesPublic(orgId?: string): Promise<Office[]> {
+  const supabase = await createServiceClient()
+  let query = supabase.from("offices").select("*")
+  if (orgId) query = query.eq("org_id", orgId)
+  const { data } = await query
+  return data || []
+}
+
+async function getStoredOfficeByIdPublic(officeId: string): Promise<Office | null> {
+  const supabase = await createServiceClient()
+  const { data } = await supabase
+    .from("offices")
+    .select("*")
+    .eq("id", officeId)
+    .maybeSingle()
+  return data || null
+}
+
+// ── Auth-aware helpers (use from server actions in page context) ──
+
+export async function getOrgIdFromSlug(slug: string): Promise<string | null> {
+  const supabase = await createServiceClient()
+  const { data, error } = await supabase
+    .from("organizations")
+    .select("id")
+    .eq("slug", slug)
+    .maybeSingle()
+  if (error) console.error("[v0] getOrgIdFromSlug error:", error)
+  return data?.id || null
+}
+
+export async function getStoredOffices(orgId: string): Promise<Office[]> {
+  return getStoredOfficesPublic(orgId)
+}
+
+export async function getStoredOfficeById(officeId: string, orgId: string): Promise<Office | null> {
+  const supabase = await createServiceClient()
+  const { data } = await supabase
+    .from("offices")
+    .select("*")
+    .eq("id", officeId)
+    .eq("org_id", orgId)
+    .maybeSingle()
+  return data || null
+}
+
+export async function addOffice(
+  orgId: string,
+  id: string,
+  name: string,
+  abbreviation: string,
+  prefix: string,
+  color: string,
+  counters: number,
+): Promise<boolean> {
+  const supabase = await createClient()
+  const { error } = await supabase
+    .from("offices")
+    .insert({ org_id: orgId, id, name, abbreviation, prefix, color, counters })
+  if (error) console.error("[v0] Add office error:", error)
+  return !error
+}
+
+export async function updateOffice(
+  orgId: string,
+  id: string,
+  updates: Partial<Omit<Office, "id">>,
+): Promise<boolean> {
+  const supabase = await createClient()
+  const { error } = await supabase
+    .from("offices")
+    .update(updates)
+    .eq("org_id", orgId)
+    .eq("id", id)
+  if (!error && updates.counters !== undefined) {
+    const keys = officeKeys(id)
+    const serving = await getOfficeServing(id, orgId)
+    const newServing: Record<number, string | null> = {}
+    for (let i = 1; i <= updates.counters; i++) {
+      newServing[i] = serving[i] ?? null
+    }
+    await redis.set(keys.COUNTERS, updates.counters)
+    await redis.set(keys.SERVING, newServing)
+  }
+  return !error
+}
+
+export async function deleteOffice(orgId: string, id: string): Promise<boolean> {
+  const supabase = await createClient()
+  const { error } = await supabase
+    .from("offices")
+    .delete()
+    .eq("org_id", orgId)
+    .eq("id", id)
+  if (!error) {
+    const keys = officeKeys(id)
+    await redis.del(keys.TICKETS)
+    await redis.del(keys.NEXT_SEQ)
+    await redis.del(keys.SERVING)
+    await redis.del(keys.COUNTERS)
+  }
+  return !error
+}
+
+export async function verifyOfficePin(officeId: string, pin: string, orgId: string): Promise<boolean> {
+  const supabase = await createServiceClient()
+  const { data } = await supabase
+    .from("operators")
+    .select("id")
+    .eq("office_id", officeId)
+    .eq("pin", pin)
+    .eq("org_id", orgId)
+    .maybeSingle()
+  return !!data
+}
+
+// ── Seed offices for a new org ─────────────────────────────────────
+
+export async function seedDefaultOffices(orgId: string) {
+  const supabase = await createClient()
+  for (const off of SEED_OFFICES) {
+    const { error } = await supabase
+      .from("offices")
+      .insert({ ...off, org_id: orgId })
+    if (error) console.error(`[v0] Failed to seed office ${off.id}:`, error)
+  }
+}
 
 // ── Read helpers ──────────────────────────────────────────────────
 
@@ -18,13 +148,12 @@ export async function getOfficeTickets(officeId: string): Promise<Ticket[]> {
   return tickets || []
 }
 
-export async function getOfficeServing(officeId: string): Promise<Record<number, string | null>> {
-  const office = await getStoredOfficeById(officeId)
+export async function getOfficeServing(officeId: string, orgId?: string): Promise<Record<number, string | null>> {
+  const office = orgId ? await getStoredOfficeById(officeId, orgId) : await getStoredOfficeByIdPublic(officeId)
   if (!office) return {}
   const keys = officeKeys(officeId)
   const serving = await redis.get<Record<number, string | null>>(keys.SERVING)
   if (serving) return serving
-  // Initialize with nulls
   const init: Record<number, string | null> = {}
   for (let i = 1; i <= office.counters; i++) init[i] = null
   return init
@@ -34,14 +163,14 @@ export async function getOfficeCounterCount(officeId: string): Promise<number> {
   const keys = officeKeys(officeId)
   const count = await redis.get<number>(keys.COUNTERS)
   if (count) return count
-  const office = await getStoredOfficeById(officeId)
+  const office = await getStoredOfficeByIdPublic(officeId)
   return office?.counters || 1
 }
 
 // ── Ticket issuance ───────────────────────────────────────────────
 
 export async function issueTicket(officeId: string): Promise<Ticket | null> {
-  const office = await getStoredOfficeById(officeId)
+  const office = await getStoredOfficeByIdPublic(officeId)
   if (!office) return null
 
   const keys = officeKeys(officeId)
@@ -72,7 +201,6 @@ export async function callNext(officeId: string, counter: number): Promise<Ticke
   const tickets = await getOfficeTickets(officeId)
   const serving = await getOfficeServing(officeId)
 
-  // Complete current ticket at this counter if serving
   const currentId = serving[counter]
   if (currentId) {
     const idx = tickets.findIndex((t) => t.id === currentId && (t.status === "serving" || t.status === "called"))
@@ -82,7 +210,6 @@ export async function callNext(officeId: string, counter: number): Promise<Ticke
     }
   }
 
-  // Find next waiting ticket
   const next = tickets.find((t) => t.status === "waiting")
   if (!next) {
     serving[counter] = null
@@ -101,20 +228,13 @@ export async function callNext(officeId: string, counter: number): Promise<Ticke
   return next
 }
 
-function sleep(ms: number) {
-  return new Promise(resolve => setTimeout(resolve, ms))
-}
-
-export async function recallTicket(
-  officeId: string,
-  ticketId: string,
-  counterNum: number
-): Promise<any> {
+export async function recallTicket(officeId: string, ticketId: string, counterNum: number): Promise<Ticket | null> {
   const keys = officeKeys(officeId)
   const tickets = await getOfficeTickets(officeId)
   const ticket = tickets.find(t => (t.id === ticketId && t.counter === counterNum))
-  if (!ticket || ticket.status!=="called") return null
+  if (!ticket || (ticket.status !== "called" && ticket.status !== "recall")) return null
 
+  ticket.status = "recall"
   ticket.calledAt = Date.now()
   await redis.set(keys.TICKETS, tickets)
   return ticket
@@ -124,7 +244,7 @@ export async function serveTicket(officeId: string, ticketId: string): Promise<T
   const keys = officeKeys(officeId)
   const tickets = await getOfficeTickets(officeId)
   const ticket = tickets.find((t) => t.id === ticketId)
-  if (!ticket || ticket.status !== "called") return null
+  if (!ticket || (ticket.status !== "called" && ticket.status !== "recall")) return null
 
   ticket.status = "serving"
   ticket.servedAt = Date.now()
@@ -191,7 +311,7 @@ export async function holdTicket(officeId: string, ticketId: string): Promise<Ti
 // ── Queue reset ───────────────────────────────────────────────────
 
 export async function resetOfficeQueue(officeId: string): Promise<void> {
-  const office = await getStoredOfficeById(officeId)
+  const office = await getStoredOfficeByIdPublic(officeId)
   if (!office) return
   const keys = officeKeys(officeId)
   const counterCount = await getOfficeCounterCount(officeId)
@@ -203,7 +323,7 @@ export async function resetOfficeQueue(officeId: string): Promise<void> {
   await redis.set(keys.SERVING, serving)
 }
 
-// ── Counter management (supervisor) ───────────────────────────────
+// ── Counter management ────────────────────────────────────────────
 
 export async function setOfficeCounters(officeId: string, count: number): Promise<void> {
   const keys = officeKeys(officeId)
@@ -216,28 +336,10 @@ export async function setOfficeCounters(officeId: string, count: number): Promis
   await redis.set(keys.SERVING, newServing)
 }
 
-// ── PIN verification ──────────────────────────────────────────────
-
-export async function verifyOfficePin(officeId: string, pin: string): Promise<boolean> {
-  const office = await getStoredOfficeById(officeId)
-  if (!office) return false
-  const envPin = office.pin || process.env.ADMIN_PIN || "1234"
-  return pin === envPin
-}
-
-export async function verifySupervisorPin(pin: string): Promise<boolean> {
-  const supervisorPin = process.env.SUPERVISOR_PIN || process.env.ADMIN_PIN || "0000"
-  return pin === supervisorPin
-}
-
 // ── Transfer ticket ──────────────────────────────────────────────
 
-export async function transferTicket(
-  fromOfficeId: string,
-  toOfficeId: string,
-  ticketId: string
-): Promise<Ticket | null> {
-  const toOffice = getOffice(toOfficeId)
+export async function transferTicket(fromOfficeId: string, toOfficeId: string, ticketId: string): Promise<Ticket | null> {
+  const toOffice = await getStoredOfficeByIdPublic(toOfficeId)
   if (!toOffice) return null
 
   const toKeys = officeKeys(toOfficeId)
@@ -251,21 +353,17 @@ export async function transferTicket(
 
   const ticket = fromTickets[ticketIdx]
 
-  // Allow transfer for serving or done tickets
   if (ticket.status !== "serving" && ticket.status !== "done") return null
 
-  // Mark as done if still serving (needed before transfer)
   if (ticket.status === "serving") {
     ticket.status = "done"
     ticket.doneAt = Date.now()
 
-    // Clear from serving state
     if (ticket.counter) {
       fromServing[ticket.counter] = null
     }
   }
 
-  // Create new ticket in destination office with new ID
   const nextSeq = await redis.incr(toKeys.NEXT_SEQ)
   const newTicket: Ticket = {
     id: ticket.id,
@@ -283,130 +381,46 @@ export async function transferTicket(
   await redis.set(toKeys.TICKETS, toTickets)
   await completeTicket(fromOfficeId, ticketId)
 
-
   return newTicket
 }
 
-// ── Office management (supervisor) ────────────────────────────────
+// ── Aggregate data ────────────────────────────────────────────────
 
-const OFFICES_KEY = "system:offices"
+async function getOfficeStats(office: Office) {
+  const tickets = await getOfficeTickets(office.id)
+  const serving = await getOfficeServing(office.id)
+  const counterCount = await getOfficeCounterCount(office.id)
 
-export async function getStoredOffices(): Promise<typeof OFFICES> {
-  const stored = await redis.get<typeof OFFICES>(OFFICES_KEY)
-  return stored || OFFICES
-}
+  const waiting = tickets.filter((t) => t.status === "waiting")
+  const done = tickets.filter((t) => t.status === "done")
+  const active = tickets.filter((t) => t.status === "called" || t.status === "serving")
 
-export async function getStoredOfficeById(id: string) {
-  const offices = await getStoredOffices()
-  return offices.find((o) => o.id === id) || null
-}
+  const completedWithWait = done.filter((t) => t.calledAt && t.createdAt)
+  const avgWait = completedWithWait.length > 0
+    ? Math.round(completedWithWait.reduce((sum, t) => sum + ((t.calledAt! - t.createdAt) / 60000), 0) / completedWithWait.length)
+    : 0
 
-export async function addOffice(
-  id: string,
-  name: string,
-  abbreviation: string,
-  prefix: string,
-  color: string,
-  counters: number,
-  pin: string
-): Promise<boolean> {
-  const offices = await getStoredOffices()
-  if (offices.find((o) => o.id === id)) return false
+  const idleCounters = Object.values(serving).filter((v) => v === null).length
 
-  offices.push({
-    id,
-    name,
-    abbreviation,
-    prefix,
-    color,
-    counters,
-    pin,
-  })
-
-  await redis.set(OFFICES_KEY, offices)
-  return true
-}
-
-export async function updateOffice(
-  id: string,
-  updates: { name?: string; abbreviation?: string; prefix?: string; color?: string; counters?: number; pin?: string }
-): Promise<boolean> {
-  const offices = await getStoredOffices()
-  const office = offices.find((o) => o.id === id)
-  if (!office) return false
-
-  if (updates.name) office.name = updates.name
-  if (updates.abbreviation) office.abbreviation = updates.abbreviation
-  if (updates.prefix) office.prefix = updates.prefix
-  if (updates.color) office.color = updates.color
-  if (updates.pin) office.pin = updates.pin
-  if (updates.counters !== undefined) {
-    const keys = officeKeys(id)
-    await setOfficeCounters(id, updates.counters)
+  return {
+    id: office.id,
+    name: office.name,
+    abbreviation: office.abbreviation,
+    prefix: office.prefix,
+    color: office.color,
+    queueDepth: waiting.length,
+    avgWaitMinutes: avgWait,
+    ticketsServed: done.length,
+    activeTickets: active.length,
+    totalCounters: counterCount,
+    idleCounters,
+    serving,
+    tickets,
   }
-
-  await redis.set(OFFICES_KEY, offices)
-  return true
 }
 
-export async function deleteOffice(id: string): Promise<boolean> {
-  const offices = await getStoredOffices()
-  const idx = offices.findIndex((o) => o.id === id)
-  if (idx === -1) return false
-
-  offices.splice(idx, 1)
-  await redis.set(OFFICES_KEY, offices)
-
-  // Clear all queue data for deleted office
-  const keys = officeKeys(id)
-  await redis.del(keys.TICKETS)
-  await redis.del(keys.NEXT_SEQ)
-  await redis.del(keys.SERVING)
-  await redis.del(keys.COUNTERS)
-
-  return true
-}
-
-// ── Aggregate data (supervisor) ───────────────────────────────────
-
-export async function getAllOfficeStats() {
-  const offices = await getStoredOffices()
-  const stats = await Promise.all(
-    offices.map(async (office) => {
-      const tickets = await getOfficeTickets(office.id)
-      const serving = await getOfficeServing(office.id)
-      const counterCount = await getOfficeCounterCount(office.id)
-
-      const waiting = tickets.filter((t) => t.status === "waiting")
-      const done = tickets.filter((t) => t.status === "done")
-      const active = tickets.filter((t) => t.status === "called" || t.status === "serving")
-
-      // Calculate avg wait time for completed tickets
-      const completedWithWait = done.filter((t) => t.calledAt && t.createdAt)
-      const avgWait = completedWithWait.length > 0
-        ? Math.round(completedWithWait.reduce((sum, t) => sum + ((t.calledAt! - t.createdAt) / 60000), 0) / completedWithWait.length)
-        : 0
-
-      // Count idle counters
-      const idleCounters = Object.values(serving).filter((v) => v === null).length
-
-      return {
-        id: office.id,
-        name: office.name,
-        abbreviation: office.abbreviation,
-        prefix: office.prefix,
-        pin: office.pin,
-        color: office.color,
-        queueDepth: waiting.length,
-        avgWaitMinutes: avgWait,
-        ticketsServed: done.length,
-        activeTickets: active.length,
-        totalCounters: counterCount,
-        idleCounters,
-        serving,
-        tickets,
-      }
-    })
-  )
+export async function getAllOfficeStats(orgId?: string) {
+  const offices = orgId ? await getStoredOffices(orgId) : await getStoredOfficesPublic()
+  const stats = await Promise.all(offices.map((office) => getOfficeStats(office)))
   return stats
 }

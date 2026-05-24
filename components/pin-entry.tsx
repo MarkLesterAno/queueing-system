@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { verifyOfficePin, verifySupervisorPin } from "@/lib/actions"
+import { verifyOfficePin } from "@/lib/actions"
 import { motion } from "framer-motion"
 
 export default function PinEntry({

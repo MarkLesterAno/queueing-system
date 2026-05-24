@@ -1,14 +1,18 @@
+import { NextRequest } from "next/server"
 import { getOfficeTickets, getOfficeServing, getOfficeCounterCount, getStoredOffices } from "@/lib/actions"
 import { getEstimatedWait } from "@/lib/queue"
 
 export const dynamic = "force-dynamic"
 
 export async function GET(
-  request: Request,
+  request: NextRequest,
   { params }: { params: Promise<{ office: string }> }
 ) {
   const { office: officeId } = await params
-  const offices = await getStoredOffices()
+  const searchParams = request.nextUrl.searchParams
+  const orgId = searchParams.get("orgId") || undefined
+
+  const offices = await getStoredOffices(orgId)
   const office = offices.find((o) => o.id === officeId)
   if (!office) {
     return new Response("Office not found", { status: 404 })

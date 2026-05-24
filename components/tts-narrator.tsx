@@ -13,33 +13,40 @@ type TextToSpeechProps = {
 export default function TextToSpeech({
   recall,
   text,
-  rate = 1,
+  rate = 0.9,
   pitch = 1,
   volume = 1,
 }: TextToSpeechProps) {
-  text = text ? text.split("-")[1] : "";
-
-  const prevRecallRef = useRef<number | null>(null);
-  const prevTextRef = useRef<string | null>(null);
+  const prevRecallRef = useRef<number>(0);
+  const prevTextRef = useRef<string>("");
   const isFirstRender = useRef(true);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
     if (!text) return;
 
-    // ✅ Skip first render
     if (isFirstRender.current) {
       isFirstRender.current = false;
+      prevRecallRef.current = recall;
+      prevTextRef.current = text;
       return;
     }
-    
-    if (prevTextRef.current === text) return;
 
-    if (prevRecallRef.current === recall) return;
+    const isNewTicket = prevTextRef.current !== text;
+    const isRecall = prevRecallRef.current !== recall;
+
+    if (!isNewTicket && !isRecall) return;
 
     window.speechSynthesis.cancel();
 
-    const utterance = new SpeechSynthesisUtterance(text);
+    const parts = text.split("-");
+    const prefix = parts[0] ?? "";
+    const num = parts[1] ?? "";
+    const message = isRecall && !isNewTicket
+      ? `Re-calling ${prefix} ${num}`
+      : `Now serving ${prefix} ${num}`;
+
+    const utterance = new SpeechSynthesisUtterance(message);
     utterance.rate = rate;
     utterance.pitch = pitch;
     utterance.volume = volume;
@@ -47,13 +54,8 @@ export default function TextToSpeech({
     window.speechSynthesis.speak(utterance);
 
     prevRecallRef.current = recall;
-  }, [
-    recall, // ✅ always present
-    text,
-    rate,
-    pitch,
-    volume,
-  ]);
+    prevTextRef.current = text;
+  }, [recall, text, rate, pitch, volume]);
 
   return null;
 }
